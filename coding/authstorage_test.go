@@ -739,3 +739,22 @@ func TestAuthStorageMutationsPreserveUntouchedEntries(t *testing.T) {
 		})
 	}
 }
+
+// D550: proper-lockfile refreshes the lock at stale/2 (15s for the 30s window
+// auth-storage.ts uses); the port refreshes at stale/3 (10s), which leaves a 20s
+// margin instead of 15s between a refresh and the point a contender may steal the
+// lock. A live holder whose refresh is delayed is therefore less likely to be
+// treated as dead. Pin the ratio so the margin cannot silently shrink.
+func TestAuthLockRefreshUsesAThirdOfTheStaleWindow(t *testing.T) {
+	// Read the interval the refresher actually uses, not a copy of the arithmetic.
+	interval := authLockRefreshInterval(authLockStaleMs)
+	window := time.Duration(authLockStaleMs) * time.Millisecond
+	if interval*3 != window {
+		t.Fatalf("refresh interval %v is not a third of the %v window", interval, window)
+	}
+	// The margin a delayed refresh may consume must exceed proper-lockfile's
+	// stale/2, which is what this divergence buys.
+	if margin := window - interval; margin <= window/2 {
+		t.Fatalf("margin %v is not larger than proper-lockfile's half-window refresh", margin)
+	}
+}

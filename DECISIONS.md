@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D549)
+# Deliberate divergences from pi (D1–D550)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9541,3 +9541,26 @@ rather than latent because `FindWordBackward`/`FindWordForward` are exported and
 caller outside `tui/` can reach it.
 
 Test: `TestFindWordBoundsBeyondTheText`.
+
+### D550
+
+**The auth lock refreshes at a third of its stale window, not a half.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding-agent/src/core/auth-storage.ts:122`
+locks `auth.json` through `proper-lockfile` with `stale: 30_000`, and the library
+defaults its refresh to `options.update = options.stale / 2` clamped to
+`[1000, stale / 2]` (`node_modules/proper-lockfile/lib/lockfile.js:220-221`), i.e. every
+15 s.
+
+The port's `authFileLock.refresh` touches the lock's mtime every `staleMs/3` — 10 s.
+A contender takes the lock over once `time.Since(mtime) > staleMs`, so what matters is
+the margin between two refreshes and the stale window: the port leaves 20 s where the
+library leaves 15 s, and a holder whose refresh is delayed by scheduling, a slow disk or
+a suspended process is therefore LESS likely to have its still-live lock stolen. A dead
+holder is detected at the same 30 s on both.
+
+This is a deliberate safety margin rather than a parity claim: the reference's own
+default is only a default, the two differ solely in how much slack a live holder gets,
+and no supported behaviour depends on a lock being stolen 5 s earlier.
+
+Test: `TestAuthLockRefreshUsesAThirdOfTheStaleWindow`.

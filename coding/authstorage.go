@@ -193,9 +193,16 @@ func (l *authFileLock) check() error {
 	return l.checkLocked()
 }
 
+// authLockRefreshInterval is how often a held lock touches its mtime. D550: a third of
+// the stale window, where proper-lockfile defaults to a half, so a live holder whose
+// refresh is delayed has 20s of margin instead of 15s before a contender may steal it.
+func authLockRefreshInterval(staleMs int) time.Duration {
+	return time.Duration(staleMs/3) * time.Millisecond
+}
+
 func (l *authFileLock) refresh() {
 	defer close(l.done)
-	ticker := time.NewTicker(time.Duration(l.staleMs/3) * time.Millisecond)
+	ticker := time.NewTicker(authLockRefreshInterval(l.staleMs))
 	defer ticker.Stop()
 	for {
 		select {
