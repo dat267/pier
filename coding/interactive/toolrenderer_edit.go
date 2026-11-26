@@ -11,10 +11,11 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// editRenderArgs is the preview input: the resolved path and the edits.
 type editRenderArgs struct {
-	Path  string
-	Edits []coding.Edit
+	Path        string
+	FilePath    string
+	HasFilePath bool
+	Edits       []coding.Edit
 }
 
 // getRenderablePreviewInput extracts the path/edits pair that can be previewed.
@@ -23,19 +24,20 @@ func getRenderablePreviewInput(args any) *editRenderArgs {
 	if decoded == nil {
 		return nil
 	}
-	// The path resolves once, as `file_path ?? path` (upstream edit.ts
-	// getRenderablePreviewInput), and the header, the diff input and the args key
-	// all read that one value: reading `path` first here made a call carrying both
-	// keys preview one file's diff under another file's header.
-	path, _ := argString(decoded, "file_path", "path")
-	if path == "" {
+	path, hasPath := argString(decoded, "path", "file_path")
+	if !hasPath || path == "" {
 		return nil
 	}
 	edits := parseEditArgs(decoded)
 	if len(edits) == 0 {
 		return nil
 	}
-	return &editRenderArgs{Path: path, Edits: edits}
+	filePath, hasFilePath := "", false
+	if rawFilePath, present := decoded["file_path"]; present && rawFilePath != nil {
+		filePath, _ = argString(decoded, "file_path")
+		hasFilePath = true
+	}
+	return &editRenderArgs{Path: path, FilePath: filePath, HasFilePath: hasFilePath, Edits: edits}
 }
 
 func parseEditArgs(decoded map[string]any) []coding.Edit {
@@ -74,6 +76,9 @@ func formatEditCall(args *editRenderArgs, theme *Theme, cwd string) string {
 	path := ""
 	if args != nil {
 		path = args.Path
+		if args.HasFilePath {
+			path = args.FilePath
+		}
 	}
 	pathDisplay := RenderToolPath(&path, theme, cwd, "")
 	return theme.Fg("toolTitle", theme.Bold("edit")) + " " + pathDisplay

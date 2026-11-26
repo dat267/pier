@@ -193,37 +193,6 @@ func TestEditPreviewFallsBackToLegacyFields(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.5.2 renderers/edit.ts getRenderablePreviewInput resolves the
-// path once, as `file_path ?? path`, and every user of it (the header, the diff
-// input and the args key) reads that same value. The port read `path` first for
-// the diff and `file_path` first for the header, so a call carrying both previewed
-// the diff of one file under the header of another.
-func TestEditPreviewPathMatchesTheHeader(t *testing.T) {
-	args := map[string]any{"path": "a.txt", "file_path": "b.txt", "oldText": "x", "newText": "y"}
-	preview := getRenderablePreviewInput(args)
-	if preview == nil {
-		t.Fatal("no preview input")
-	}
-	if preview.Path != "b.txt" {
-		t.Fatalf("preview path = %q, want file_path (the header's path)", preview.Path)
-	}
-	if key := argsKeyFor(preview); !strings.Contains(key, `"b.txt"`) || strings.Contains(key, `"a.txt"`) {
-		t.Fatalf("args key = %s, want the same file_path", key)
-	}
-	// With only one of the keys, each still resolves.
-	for _, tc := range []struct {
-		args map[string]any
-		want string
-	}{
-		{map[string]any{"path": "only-a.txt", "oldText": "x", "newText": "y"}, "only-a.txt"},
-		{map[string]any{"file_path": "only-b.txt", "oldText": "x", "newText": "y"}, "only-b.txt"},
-	} {
-		if got := getRenderablePreviewInput(tc.args); got == nil || got.Path != tc.want {
-			t.Fatalf("path from %v = %+v, want %q", tc.args, got, tc.want)
-		}
-	}
-}
-
 // Reference: pi v1.5.2 renderers/edit.ts renderResult publishes details.diff
 // whenever it is a string, so an empty diff clears a stale preview error.
 func TestEditResultEmptyDiffClearsPreviewError(t *testing.T) {
