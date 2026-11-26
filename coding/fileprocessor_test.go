@@ -3,6 +3,7 @@ package coding
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"image"
 	"image/color"
 	"image/png"
@@ -275,5 +276,39 @@ func TestProcessImageDropsASliverThatRoundsToZero(t *testing.T) {
 	}
 	if !strings.Contains(result.Message, "Could not process image") && result.Message == "" {
 		t.Fatalf("message = %q, want a reported omission", result.Message)
+	}
+}
+
+// A BMP has no pass-through path: normalizeImage refuses it BEFORE the
+// autoResizeImages branch, exactly as the reference does (image-process.ts:78-84
+// normalises first), so the omission message is the same with resizing on or off.
+// The comment used to claim auto-resize off let a bmp through unchanged, which
+// no code path does. D408 is the divergence that makes this visible: Photon
+// converts bmp upstream and the Go port cannot.
+func TestProcessImageOmitsBMPWithResizeOnOrOff(t *testing.T) {
+	const dib = 40
+	rowSize := ((2*3 + 3) / 4) * 4
+	size := 14 + dib + rowSize*2
+	bmp := make([]byte, size)
+	copy(bmp, "BM")
+	binary.LittleEndian.PutUint32(bmp[2:], uint32(size))
+	binary.LittleEndian.PutUint32(bmp[10:], 14+dib)
+	binary.LittleEndian.PutUint32(bmp[14:], dib)
+	binary.LittleEndian.PutUint32(bmp[18:], 2)
+	binary.LittleEndian.PutUint32(bmp[22:], 2)
+	binary.LittleEndian.PutUint16(bmp[26:], 1)
+	binary.LittleEndian.PutUint16(bmp[28:], 24)
+
+	// The sniffer names the format even though the converter cannot inline it.
+	if got := DetectSupportedImageMimeType(bmp); got != "image/bmp" {
+		t.Fatalf("sniff = %q, want image/bmp", got)
+	}
+	const omission = "[Image omitted: could not be converted to a supported inline image format.]"
+	for _, autoResize := range []bool{true, false} {
+		value := autoResize
+		result := ProcessImage(bmp, "image/bmp", &ProcessImageOptions{AutoResizeImages: &value})
+		if result.OK || result.Message != omission {
+			t.Fatalf("autoResize=%v: ok=%v message=%q, want the omission message", autoResize, result.OK, result.Message)
+		}
 	}
 }
