@@ -103,6 +103,19 @@ func TestIsCacheWarmingReplayable(t *testing.T) {
 	if !IsCacheWarmingReplayable(model, nil) {
 		t.Fatal("no options must be replayable")
 	}
+	// The API gate is what keeps a VIRTUAL model out of cache warming, which in
+	// turn is why the public Models.StreamSimple never sees one (it has no virtual
+	// routing, unlike the reference's streamSimple). A virtual model's API is
+	// pi-virtual, so it is replayable-but-skipped further up; pin that the gate
+	// refuses an Anthropic-shaped virtual selection too.
+	virtual := &ai.Model{ID: "v", API: VirtualModelAPI, Provider: "anthropic"}
+	if !IsCacheWarmingReplayable(virtual, &ai.SimpleStreamOptions{Reasoning: ai.ThinkHigh}) {
+		t.Fatal("a non-Anthropic API id must not reach the Anthropic reasoning check")
+	}
+	if virtual.API == ai.APIAnthropicMessages {
+		t.Fatal("VirtualModelAPI must differ from the Anthropic API id")
+	}
+
 	// Anthropic reasoning with budget-based thinking cannot replay.
 	reasoning := &ai.SimpleStreamOptions{Reasoning: ai.ThinkHigh}
 	if IsCacheWarmingReplayable(model, reasoning) {
