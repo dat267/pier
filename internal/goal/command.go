@@ -3,6 +3,7 @@ package goal
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -49,8 +50,11 @@ func ParseGoalCommand(args string) GoalCommand {
 	}
 
 	// Creation requires the explicit "set" verb — any other unknown word is a
-	// typo, not an objective (e.g. "/goal view", "/goal cleared").
-	if !strings.HasPrefix(trimmed, "set ") && trimmed != "set" {
+	// typo, not an objective (e.g. "/goal view", "/goal cleared"). The verb is
+	// followed by whitespace, not by a literal space: the argument arrives raw and
+	// JSTrim already treats tab and newline as whitespace, so requiring only " "
+	// reported "/goal set<TAB>x" as an unknown subcommand.
+	if !hasSetVerb(trimmed) {
 		return GoalCommand{Kind: CmdError, Message: `Unknown subcommand "` + TruncateObjective(trimmed, 20) + `". Use /goal status, /goal set <objective>, /goal pause, /goal resume, or /goal clear.`}
 	}
 
@@ -62,4 +66,21 @@ func ParseGoalCommand(args string) GoalCommand {
 		return GoalCommand{Kind: CmdError, Message: "Goal budgets are not supported. Use /goal set <objective>."}
 	}
 	return GoalCommand{Kind: CmdSet, Objective: objective}
+}
+
+// hasSetVerb reports whether trimmed is "set" alone or "set" followed by a
+// whitespace rune, using the same JS whitespace set JSTrim uses.
+func hasSetVerb(trimmed string) bool {
+	if trimmed == "set" {
+		return true
+	}
+	if !strings.HasPrefix(trimmed, "set") {
+		return false
+	}
+	rest := trimmed[3:]
+	if rest == "" {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(rest)
+	return ai.IsJSSpace(r)
 }

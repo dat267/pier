@@ -100,3 +100,23 @@ func TestGoalCommandTrimsJavaScriptWhitespace(t *testing.T) {
 		}
 	}
 }
+func TestParseGoalCommandSetSeparatedByWhitespace(t *testing.T) {
+	// The parser trims JavaScript whitespace (JSTrim) and then required a literal
+	// space after "set", so a tab or newline separator was reported as an unknown
+	// subcommand. Any JS whitespace rune separates the verb from the objective.
+	// pier-only: the goal feature has no upstream counterpart.
+	for _, item := range []struct {
+		input     string
+		objective string
+	}{
+		{"set\tobjective", "objective"},
+		{"set\nobjective", "objective"},
+		{"set \t objective", "objective"},
+		{"set\t\ufeffobjective\ufeff", "objective"},
+	} {
+		got := ParseGoalCommand(item.input)
+		if got.Kind != CmdSet || got.Objective != item.objective {
+			t.Errorf("input %q: got %+v, want kind=%s objective=%q", item.input, got, CmdSet, item.objective)
+		}
+	}
+}
