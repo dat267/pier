@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D553)
+# Deliberate divergences from pi (D1–D554)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9625,3 +9625,30 @@ A file that is merely absent stays silent on both sides: the reference's warning
 
 Tests: `TestLoadProjectContextFilesWithDiagnosticsReportsAnUnreadableFile`,
 `TestLoadContextFileFromDirPreference`.
+
+### D554
+
+**An unknown content block type is kept verbatim, not treated as a broken message.**
+
+Reference: pi v1.6.0 (`faac5858`) loads session entries with a plain `JSON.parse` and no
+discriminator check, so a content block of any `type` survives into the context.
+
+The port decodes blocks by `type` and rejected the whole message on an unrecognised one, so
+`ai.UnmarshalMessage` on a user message holding `{"type":"futureBlock","v":1}` errored and
+every caller that treats a decode error as "skip this message" dropped it, including its valid
+`text` block. `OpaqueContent` in `ai/messages.go` now carries the block's `type` and its
+original JSON bytes, so the message survives and a later save re-emits the block unchanged.
+Unknown members inside a known type are unaffected: they are already ignored by the typed
+decoders, while an opaque block keeps its own bytes exactly.
+
+A block with **no** `type` is still an error. That is malformed rather than newer, and the
+opaque form needs a discriminator to report.
+
+Reachable only from a newer pier: the four known types are this project's whole set, and an
+older pier reading a newer session's block is the case this preserves. `OpaqueContent`
+satisfies `UserContent`, because a future user block is what it most likely is; a future
+assistant-only block still round-trips as `Content` but is refused in a user list by the
+existing check, so a known `toolCall` in the wrong list keeps failing.
+
+Tests: `TestUnknownContentBlockSurvivesRoundTrip`, `TestContentBlockWithoutTypeIsRejected`,
+`TestUserContentListRejectsToolCall`.

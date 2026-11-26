@@ -682,3 +682,18 @@ type CustomMessage struct {
 }
 
 func (m *CustomMessage) messageRole() Role { return m.Role }
+
+// OpaqueContent is a content block whose `type` this version does not know,
+// kept byte for byte so a newer pier's session still round-trips through this
+// one. It decodes anywhere a UserContent is accepted, which is what a future
+// user block is; a future assistant-only block is kept as a Content but not as
+// a UserContent, so the user-list check still rejects a known toolCall.
+type OpaqueContent struct {
+	// Kind is the block's `type` discriminator.
+	Kind ContentKind
+	// Raw is the block's original JSON bytes, including the type member.
+	Raw json.RawMessage
+}
+
+func (o OpaqueContent) contentKind() ContentKind { return o.Kind }
+func (o OpaqueContent) userContent()             {}

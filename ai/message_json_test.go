@@ -473,3 +473,45 @@ func TestSystemMessageSectionKeysFollowObjectOrder(t *testing.T) {
 		t.Fatalf("encoded = %s\nwant     %s", encoded, want)
 	}
 }
+
+// An unknown block type is kept verbatim instead of dropping its whole message.
+// Upstream loads sessions with a plain JSON.parse and no discriminator check, so
+// every block survives there; the port rejected the message, losing its valid
+// blocks too. Reachable only from a NEWER pier, since the four known types are
+// this project's whole set.
+func TestUnknownContentBlockSurvivesRoundTrip(t *testing.T) {
+	in := `{"role":"user","content":[{"type":"text","text":"keep me"},{"type":"futureBlock","v":1}],"timestamp":1}`
+	message, err := UnmarshalMessage([]byte(in))
+	if err != nil {
+		t.Fatalf("UnmarshalMessage = %v, want the message kept", err)
+	}
+	user, ok := message.(*UserMessage)
+	if !ok {
+		t.Fatalf("message = %T, want *UserMessage", message)
+	}
+	if len(user.Content.Blocks) != 2 {
+		t.Fatalf("blocks = %d, want 2 (the known text and the opaque block)", len(user.Content.Blocks))
+	}
+	if _, ok := user.Content.Blocks[1].(OpaqueContent); !ok {
+		t.Fatalf("block 1 = %T, want OpaqueContent", user.Content.Blocks[1])
+	}
+	if kind := user.Content.Blocks[1].contentKind(); kind != "futureBlock" {
+		t.Fatalf("opaque kind = %q, want the original discriminator", kind)
+	}
+	// The block's own bytes survive: unknown members such as "v" are not dropped.
+	encoded, err := MarshalJSON(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"content":[{"type":"text","text":"keep me"},{"type":"futureBlock","v":1}],"timestamp":1}`; string(encoded) != want {
+		t.Fatalf("MarshalJSON = %s, want %s", encoded, want)
+	}
+}
+
+// A block with no type at all is still an error: the opaque fallback needs a
+// discriminator to report, and a typeless block is malformed rather than newer.
+func TestContentBlockWithoutTypeIsRejected(t *testing.T) {
+	if _, err := UnmarshalMessage([]byte(`{"role":"user","content":[{"text":"x"}],"timestamp":1}`)); err == nil {
+		t.Fatal("a block with no type must be rejected")
+	}
+}

@@ -119,6 +119,12 @@ func marshalContentBlock(c Content) (json.RawMessage, error) {
 		}
 		return marshalToolCallContent(*v)
 	}
+	if opaque, ok := c.(OpaqueContent); ok {
+		return append(json.RawMessage(nil), opaque.Raw...), nil
+	}
+	if opaque, ok := c.(*OpaqueContent); ok && opaque != nil {
+		return append(json.RawMessage(nil), opaque.Raw...), nil
+	}
 	// Unknown content and nil block pointers keep the previous encoder path.
 	var kind ContentKind
 	switch v := c.(type) {
@@ -259,7 +265,14 @@ func unmarshalContentBlock(data json.RawMessage) (Content, error) {
 		}
 		return b, nil
 	default:
-		return nil, fmt.Errorf("ai: unknown content block type %q", probe.Type)
+		// A type this version does not know is kept verbatim rather than
+		// dropping the whole message (upstream loads with a plain JSON.parse and
+		// no discriminator check, so its blocks all survive). Only a NEWER pier
+		// can write one: the four known types are this project's whole set.
+		if probe.Type == "" {
+			return nil, fmt.Errorf("ai: content block has no type")
+		}
+		return OpaqueContent{Kind: probe.Type, Raw: append(json.RawMessage(nil), data...)}, nil
 	}
 }
 
