@@ -131,3 +131,82 @@ func TestRGIEmojiZWJTable(t *testing.T) {
 		}
 	}
 }
+
+// The four hand-enumerated emoji tables behind isRGIEmoji. Their own comments say
+// what they were derived from, and each count was checked against Node by
+// generating the set from that derivation and diffing every code point:
+// extended-pictographic 2848 code points in 156 ranges (Intl.Segmenter grouping
+// with U+200D + an emoji), RGI single code points 1193 in 80 ranges
+// (\p{RGI_Emoji} with the v flag), modifier bases 133 in 41 ranges
+// (\p{RGI_Emoji} matching base + U+1F3FB), emoji bases 1438 in 151 ranges
+// (\p{Emoji}). All four matched with ZERO extra and ZERO missing code points;
+// the RANGE counts are how pier partitions them, not a property of the set.
+//
+// A count-only check is what the widths goldens cannot give: they exercise
+// isRGIEmoji, whose COMPOSITE answer hides a wrong range the way
+// unicode.IsPunct hid the CJK table's (round 110).
+func TestEmojiRangeTables(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"extendedPictographicRanges", len(extendedPictographicRanges), 156},
+		{"rgiEmojiRanges", len(rgiEmojiRanges), 80},
+		{"modifierBaseRanges", len(modifierBaseRanges), 41},
+		{"emojiBaseRanges", len(emojiBaseRanges), 151},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s has %d ranges; want %d", tc.name, tc.got, tc.want)
+		}
+	}
+	// Sorted, non-overlapping, and non-empty: the shape every lookup assumes.
+	for _, table := range []struct {
+		name   string
+		ranges [][2]rune
+	}{
+		{"extendedPictographicRanges", extendedPictographicRanges},
+		{"rgiEmojiRanges", rgiEmojiRanges},
+		{"modifierBaseRanges", modifierBaseRanges},
+		{"emojiBaseRanges", emojiBaseRanges},
+	} {
+		for index, span := range table.ranges {
+			if span[0] > span[1] {
+				t.Fatalf("%s range %d is inverted: %v", table.name, index, span)
+			}
+			if index > 0 && table.ranges[index-1][1] >= span[0] {
+				t.Fatalf("%s range %d overlaps the previous: %v then %v", table.name, index, table.ranges[index-1], span)
+			}
+		}
+	}
+	// Boundary code points from the generated sets.
+	if !isInTable(0x00A9, extendedPictographicRanges) {
+		t.Error("U+00A9 (copyright) is extended-pictographic")
+	}
+	if isInTable(0x3012, extendedPictographicRanges) {
+		t.Error("U+3012 is not extended-pictographic")
+	}
+	// The neighbours just outside each end of the first range, so a widened span
+	// is caught: a count-only check misses 0xA0 being swallowed by 0xA9.
+	if isInTable(0x00A8, extendedPictographicRanges) || isInTable(0x00AA, extendedPictographicRanges) {
+		t.Error("U+00A8 and U+00AA are not extended-pictographic")
+	}
+	// U+00A9 is Extended_Pictographic but NOT a single-code-point RGI emoji: it
+	// needs the FE0F presentation selector, which isRGIEmoji handles through the
+	// two-rune arm.
+	if isInTable(0x00A9, rgiEmojiRanges) {
+		t.Error("U+00A9 alone is not a single-code-point RGI emoji")
+	}
+	if !isInTable(0x1F600, rgiEmojiRanges) {
+		t.Error("U+1F600 (grinning face) is a single-code-point RGI emoji")
+	}
+	if !isInTable('1', emojiBaseRanges) || !isInTable(0x0023, emojiBaseRanges) {
+		t.Error("digits and # are emoji bases (keycaps)")
+	}
+	if !isInTable(0x261D, modifierBaseRanges) {
+		t.Error("U+261D is a modifier base")
+	}
+	if isInTable(0x0041, modifierBaseRanges) {
+		t.Error("U+0041 cannot take a skin-tone modifier")
+	}
+}
