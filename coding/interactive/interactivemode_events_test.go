@@ -583,3 +583,104 @@ func TestDispatcherKeepsABackgroundedFramePending(t *testing.T) {
 		t.Fatal("a finished call's frame stayed pending")
 	}
 }
+
+// A displaced call ends as a message, not as a tool_execution_end, so its finish
+// notice is what stops its frame. The start notice names the same handle and
+// must leave the frame ticking; a notice for another handle must not touch it.
+func TestBackgroundNoticeClosesItsFrame(t *testing.T) {
+	newRendererTestTheme(t)
+	transcript := NewTranscriptRenderer(&tui.Container{}, nil, nil, nil, nil)
+	dispatcher := NewEventDispatcher(transcript, nil, nil, nil, nil, nil, nil)
+	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	component.MarkExecutionStarted()
+	dispatcher.pendingTools["c9"] = component
+
+	// The handle arrives as a status and the frame stays live.
+	details := json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"bash","outputPath":"/tmp/x.log"}`)
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c9", ToolName: "bash",
+		Result: agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "moved"}}, Details: details},
+	}})
+	if _, ok := dispatcher.pendingTools["c9"]; !ok {
+		t.Fatal("the frame was released before the call finished")
+	}
+
+	noticeFor := func(text string) *coding.SessionEvent {
+		return &coding.SessionEvent{Type: coding.SessionMessageStart, Agent: &agent.AgentEvent{
+			Message: &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}},
+		}}
+	}
+	// Another call's notice must not touch this frame.
+	if dispatcher.closeBackgroundFrameFromNotice(&ai.UserMessage{Content: ai.StringOrBlocks{
+		Text: agent.StartedNotice(agent.ToolCallHandle{ID: "bg-other", ToolName: "bash"}).(*ai.UserMessage).Content.Text,
+	}}) {
+		t.Fatal("a notice for another handle closed this frame")
+	}
+	if _, ok := dispatcher.pendingTools["c9"]; !ok {
+		t.Fatal("another call's notice released this frame")
+	}
+
+	// The start notice leaves it ticking.
+	startText := agent.StartedNotice(agent.ToolCallHandle{ID: "bg-9", ToolName: "bash", OutputPath: "/tmp/x.log"}).(*ai.UserMessage).Content.Text
+	if dispatcher.closeBackgroundFrameFromNotice(&ai.UserMessage{Content: ai.StringOrBlocks{Text: startText}}) {
+		t.Fatal("the start notice stopped the frame")
+	}
+	if again, _ := component.AnimationFrame(time.Now()); !again {
+		t.Fatal("the frame stopped ticking while the call was still running")
+	}
+
+	// The finish notice finalizes and releases it.
+	finish := agent.CompletionNotice(agent.ToolCallHandle{ID: "bg-9", ToolName: "bash", OutputPath: "/tmp/x.log"},
+		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}})
+	event := noticeFor(finish.(*ai.UserMessage).Content.Text)
+	event.Agent.Message = finish
+	dispatcher.HandleEvent(event)
+	if _, ok := dispatcher.pendingTools["c9"]; ok {
+		t.Fatal("the finish notice did not release the frame")
+	}
+	if again, _ := component.AnimationFrame(time.Now()); again {
+		t.Fatal("the frame kept ticking after the call finished")
+	}
+}
+
+// A run's end used to drop the pending map without finalizing, leaving each
+// component PARTIAL; a shell frame ticks while its result is partial or absent,
+// so an abandoned frame ticked forever (D538 fix for the 7m18s frame). A run end
+// must stop every frame it can no longer update, while a displaced call, which
+// outlives its run, keeps ticking until its own notice closes it.
+func TestAgentEndStopsOrphanedFramesButKeepsABackgroundedOne(t *testing.T) {
+	newRendererTestTheme(t)
+	transcript := NewTranscriptRenderer(&tui.Container{}, nil, nil, nil, nil)
+	dispatcher := NewEventDispatcher(transcript, nil, nil, nil, nil, nil, nil)
+
+	plain := NewToolExecutionComponent("bash", "c1", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	plain.MarkExecutionStarted()
+	dispatcher.pendingTools["c1"] = plain
+
+	displaced := NewToolExecutionComponent("bash", "c2", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	displaced.MarkExecutionStarted()
+	dispatcher.pendingTools["c2"] = displaced
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c2", ToolName: "bash",
+		Result: agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "moved"}},
+			Details: json.RawMessage(`{"backgroundHandle":"bg-2","toolCallId":"c2","toolName":"bash","outputPath":"/tmp/y.log"}`)},
+	}})
+	if again, _ := displaced.AnimationFrame(time.Now()); !again {
+		t.Fatal("the displaced frame was not ticking before the run ended")
+	}
+
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
+
+	if again, _ := plain.AnimationFrame(time.Now()); again {
+		t.Fatal("an abandoned frame kept ticking after its run ended")
+	}
+	if again, _ := displaced.AnimationFrame(time.Now()); !again {
+		t.Fatal("a displaced call's frame stopped with the run that started it, though the call is still running")
+	}
+	if _, ok := dispatcher.pendingTools["c2"]; !ok {
+		t.Fatal("the displaced frame is no longer tracked, so live updates and its notice reach nothing")
+	}
+}

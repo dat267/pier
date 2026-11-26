@@ -167,6 +167,14 @@ func TestBackgroundHandleFrameKeepsTicking(t *testing.T) {
 	if !isBackgroundHandle(handle) {
 		t.Fatal("the handle result was not recognized as a background handle")
 	}
+	// Once the call ends, the line must stop promising a notice it already sent.
+	finished := &SortToolResultContent{
+		Content: handle.Content,
+		Details: json.RawMessage(`{"backgroundHandle":"bg-9","outputPath":"/tmp/x.log","finished":true}`),
+	}
+	if line, ok := backgroundHandleLine(finished); !ok || strings.Contains(line, "A notice follows") {
+		t.Fatalf("finished line = %q", line)
+	}
 	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
 		WithBuiltInRenderers("bash", nil), nil, "/tmp")
 	component.MarkExecutionStarted()

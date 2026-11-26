@@ -9148,9 +9148,16 @@ as a message of its own) and one when it ends.
 A displaced call has not finished, so its message frame keeps rendering and
 ticking with the live output: the dispatcher records the handle as a PARTIAL
 result and keeps the component pending, so the call's later
-`tool_execution_update` events still reach it. A final result is what releases the
-frame. Freezing the frame at the handle showed a running command as if it had
-finished, and its output arrived nowhere. While a run is active it is queued as a steering message, so it
+`tool_execution_update` events still reach it. Freezing the frame at the handle
+showed a running command as if it had finished, and its output arrived nowhere.
+
+Two consequences follow, both about when a frame may stop. A run's end no
+longer drops the pending map: it finalizes each orphan (a dropped component
+stayed PARTIAL, and a shell frame ticks while its result is partial or absent, so
+an abandoned frame ticked forever) while a displaced call, which outlives its
+run by design, keeps its frame tracked and ticking. And a displaced call ends as
+a *message*, not as a `tool_execution_end`, so its finish notice is what closes
+its frame; the start notice shares the header and leaves it running. While a run is active it is queued as a steering message, so it
 reaches the transcript at that run's next turn boundary (after the tool calls in
 flight, before the next model request), as a message typed mid-run does; as a
 follow-up it waited for the run to stop, so a call that finished early stayed

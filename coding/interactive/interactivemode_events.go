@@ -3,7 +3,9 @@ package interactive
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dat267/pier/agent"
@@ -229,6 +231,12 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		}
 
 	case coding.SessionMessageStart:
+		// A displaced call ends as a *message*, not as a tool_execution_end, so
+		// its notice is what finalizes the frame it names (D538). Without this the
+		// frame stays PARTIAL and ticks forever after the call has finished.
+		if d.closeBackgroundFrameFromNotice(eventMessage(event)) {
+			d.requestRender()
+		}
 		if d.UIState != nil {
 			switch eventMessage(event).(type) {
 			case *ai.AssistantMessage:
@@ -289,7 +297,13 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			d.streamingComponent = nil
 		}
 
-		d.pendingTools = map[string]*ToolExecutionComponent{}
+		// A run's end clears whatever frame it left behind, but dropping the map
+		// alone left each of those components PARTIAL, so a shell frame kept
+		// ticking forever (its clock runs while the result is final-less). Finalize
+		// what can no longer change instead. A displaced call is the exception: it
+		// outlives its run by design, so its frame stays tracked and ticking until
+		// its own notice closes it (D538).
+		d.finishOrphanedFrames()
 		d.requestRender()
 
 	case coding.SessionAgentSettled:
@@ -732,3 +746,74 @@ func sortToolResultFromAgent(result agent.AgentToolResult) *SortToolResultConten
 
 // workingClock reads the clock for the working timer (D402); tests pin it.
 var workingClock = time.Now
+
+// finishOrphanedFrames settles the pending frames a run left behind. A
+// backgrounded call's frame is kept, because the call is still running and its
+// notice is what settles it; every other frame is finalized so its clock stops.
+func (d *EventDispatcher) finishOrphanedFrames() {
+	for callID, component := range d.pendingTools {
+		if component == nil {
+			delete(d.pendingTools, callID)
+			continue
+		}
+		if isBackgroundHandle(component.result) {
+			continue
+		}
+		// A frame that never got a result is finalized with an empty one, so its
+		// clock stops rather than running on a result that will never arrive.
+		result := component.result
+		if result == nil {
+			result = &SortToolResultContent{}
+		}
+		component.UpdateResult(result, false)
+		delete(d.pendingTools, callID)
+	}
+}
+
+// closeBackgroundFrameFromNotice finalizes the pending frame a background
+// notice names, so a displaced call's frame stops ticking when the call ends
+// instead of waiting for a tool_execution_end that never comes (D538). It does
+// nothing for any other message, and nothing when the frame is already gone.
+func (d *EventDispatcher) closeBackgroundFrameFromNotice(message ai.Message) bool {
+	user, ok := message.(*ai.UserMessage)
+	if !ok {
+		return false
+	}
+	title, _, ok := agent.ParseCompletionNotice(user.Content.Text)
+	if !ok {
+		// "bg-abc (bash) started" and "… finished" both parse; the handle is the
+		// title's first word.
+		return false
+	}
+	// The start notice shares the header, so only the outcome arms close a frame:
+	// the call is still running when it starts.
+	if !strings.HasSuffix(title, " finished") && !strings.HasSuffix(title, " failed") {
+		return false
+	}
+	handleID, _, _ := strings.Cut(title, " ")
+	if handleID == "" {
+		return false
+	}
+	for callID, component := range d.pendingTools {
+		if component == nil || component.result == nil {
+			continue
+		}
+		details := toolDetailsFrom[backgroundHandleDetails](component.result.Details)
+		if details == nil || details.Handle != handleID {
+			continue
+		}
+		finishedDetails := *details
+		finishedDetails.Finished = true
+		detailsJSON, err := json.Marshal(finishedDetails)
+		if err != nil {
+			return false
+		}
+		component.UpdateResult(&SortToolResultContent{
+			Content: []ToolResultContent{{Type: "text", Text: "Output: " + details.OutputPath}},
+			Details: detailsJSON,
+		}, false)
+		delete(d.pendingTools, callID)
+		return true
+	}
+	return false
+}

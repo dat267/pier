@@ -61,6 +61,9 @@ type bashResultState struct {
 type backgroundHandleDetails struct {
 	Handle     string `json:"backgroundHandle"`
 	OutputPath string `json:"outputPath"`
+	// Finished marks a frame whose call has ended, so its line stops promising a
+	// notice that already arrived (D538).
+	Finished bool `json:"finished,omitempty"`
 }
 
 // backgroundHandleLine is the user-facing sentence for a result that is a
@@ -76,6 +79,9 @@ func backgroundHandleLine(result *SortToolResultContent) (string, bool) {
 	line := "Moved to the background as " + handle.Handle
 	if handle.OutputPath != "" {
 		line += ". Output: " + handle.OutputPath
+	}
+	if handle.Finished {
+		return line + ". Its notice below has the result.", true
 	}
 	return line + ". A notice follows when it ends.", true
 }
