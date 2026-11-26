@@ -8232,6 +8232,17 @@ is the one place a pier-only feature is declared (id, label, description and
 current state), and `NewFeatureSettingsSelector` renders it, so a new feature needs
 its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
+A toggle writes the file that owns the setting. When the workspace has a settings
+file (and the project is trusted), the three feature toggles write that file,
+adding the key when it is not there yet, so a project keeps its feature switches in
+one place and a sibling project is unaffected; otherwise they write the global
+`settings.json`, and no workspace file is created for them. Writing the global file
+while a workspace file sets the key would have left the toggle shadowed by the
+merge the reader uses: the selector showed the old value again and the change went
+somewhere the user could not see. The workspace file still only decides a setting
+it actually sets, so a project that never mentions a feature inherits the global
+one.
+
 With the goal feature off there is no controller, so `/goal` says "The goal
 feature is off. Turn it on in /features." instead of clearing the editor and
 doing nothing, as `/loop` does (D537). Turning the feature off keeps the

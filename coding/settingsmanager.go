@@ -2884,9 +2884,38 @@ func (m *SettingsManager) GetGoalFeatureEnabled() bool {
 func (m *SettingsManager) SetGoalFeatureEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.GoalFeature = &enabled
-	m.markModified("goalFeature", "")
+	m.setFeatureToggle("goalFeature", func(settings *Settings) { settings.GoalFeature = &enabled })
+}
+
+// setFeatureToggle stores a /features toggle in the scope that owns it: the
+// workspace file when the workspace has one, else the global file. Writing the
+// workspace file is what the reader sees, because a project value wins the merge;
+// a toggle therefore changes the effective setting instead of being shadowed by a
+// project override it never touched (D496).
+func (m *SettingsManager) setFeatureToggle(field string, set func(*Settings)) {
+	if m.workspaceSettingsFileExists() {
+		m.updateProjectSettings(field, set)
+		return
+	}
+	set(m.globalSettings)
+	m.markModified(field, "")
 	m.save()
+}
+
+// workspaceSettingsFileExists reports whether a toggle belongs to the workspace:
+// the workspace has a settings file and the project is trusted. The key need not
+// be there yet; the toggle adds it, so a project that keeps a settings file keeps
+// its feature switches together in it.
+func (m *SettingsManager) workspaceSettingsFileExists() bool {
+	if !m.projectTrusted {
+		return false
+	}
+	path := m.settingsPaths[SettingsScopeProject]
+	if path == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // GetLoopFeatureEnabled reports whether the /loop feature is on (default false:
@@ -2903,9 +2932,7 @@ func (m *SettingsManager) GetLoopFeatureEnabled() bool {
 func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.LoopFeature = &enabled
-	m.markModified("loopFeature", "")
-	m.save()
+	m.setFeatureToggle("loopFeature", func(settings *Settings) { settings.LoopFeature = &enabled })
 }
 
 // backgroundToolCallChoices are the values the /features row offers, in order.
@@ -2960,9 +2987,7 @@ func (m *SettingsManager) SetBackgroundToolCallThreshold(value string) bool {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.BackgroundToolCalls = &trimmed
-	m.markModified("backgroundToolCalls", "")
-	m.save()
+	m.setFeatureToggle("backgroundToolCalls", func(settings *Settings) { settings.BackgroundToolCalls = &trimmed })
 	return true
 }
 

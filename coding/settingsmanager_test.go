@@ -963,3 +963,78 @@ func TestToleratedNumberMembersFloorInsteadOfReject(t *testing.T) {
 		t.Fatal("a fractional reserveTokens was accepted; it must reject")
 	}
 }
+
+// D496: a /features toggle writes the scope that owns it. A workspace with a
+// settings file keeps its feature switches there, and the toggle adds a key the
+// file does not have yet; a workspace with no settings file falls back to the
+// global file, which its other projects share. Writing the global file while a
+// workspace file sets the key would leave the toggle shadowed by the merge.
+func TestFeatureTogglesWriteTheWorkspaceFileWhenItExists(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	globalPath := filepath.Join(agentDir, "settings.json")
+	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
+
+	// The workspace file sets one of the three, so the toggles must reach it and add
+	// the missing keys rather than being shadowed by it.
+	writeFileMkdir(t, projectPath, `{"goalFeature":false}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if manager.GetGoalFeatureEnabled() {
+		t.Fatal("the workspace value did not win the read")
+	}
+	manager.SetGoalFeatureEnabled(true)
+	manager.SetLoopFeatureEnabled(true)
+	if !manager.SetBackgroundToolCallThreshold("1m") {
+		t.Fatal("threshold rejected")
+	}
+
+	// The effective values change, which is what the toggle promises.
+	if !manager.GetGoalFeatureEnabled() || !manager.GetLoopFeatureEnabled() {
+		t.Fatal("toggling on did not change the effective value")
+	}
+	if got := manager.GetBackgroundToolCallThreshold(); got != time.Minute {
+		t.Fatalf("threshold = %v", got)
+	}
+	project := readSettingsFile(t, projectPath)
+	if project["goalFeature"] != true || project["loopFeature"] != true || project["backgroundToolCalls"] != "1m" {
+		t.Fatalf("workspace settings = %#v", project)
+	}
+	if _, err := os.Stat(globalPath); err == nil {
+		t.Fatalf("a workspace file was shadowed by a global write: %s", globalPath)
+	}
+
+	// With no workspace file the toggle belongs to the global file, and no workspace
+	// file is created for it.
+	if err := os.Remove(projectPath); err != nil {
+		t.Fatal(err)
+	}
+	elsewhere := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	elsewhere.SetLoopFeatureEnabled(true)
+	if got := readSettingsFile(t, globalPath)["loopFeature"]; got != true {
+		t.Fatalf("global loopFeature = %#v", got)
+	}
+	if _, err := os.Stat(projectPath); err == nil {
+		t.Fatal("a toggle created a workspace settings file")
+	}
+}
+
+// A workspace file that is not trusted is ignored by the reader, so the toggle
+// must not write into it either: the global file is what counts.
+func TestFeatureToggleSkipsAnUntrustedWorkspaceFile(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
+	writeFileMkdir(t, projectPath, `{"goalFeature":false}`)
+	untrusted := false
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &untrusted})
+	manager.SetGoalFeatureEnabled(true)
+
+	if !manager.GetGoalFeatureEnabled() {
+		t.Fatal("an untrusted workspace's override suppressed the toggle")
+	}
+	if got := readSettingsFile(t, filepath.Join(agentDir, "settings.json"))["goalFeature"]; got != true {
+		t.Fatalf("global goalFeature = %#v", got)
+	}
+	if got := readSettingsFile(t, projectPath)["goalFeature"]; got != false {
+		t.Fatalf("the untrusted workspace file was written: %#v", got)
+	}
+}
