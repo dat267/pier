@@ -89,6 +89,14 @@ func TestMcpToolResultFramesLimitVisualLines(t *testing.T) {
 		t.Errorf("collapsed preview starts at %q, want the first of the last five lines", rendered[2])
 	}
 
+	// The count is the whole hidden rows, and the hint reads correctly when that is
+	// one: "1 earlier lines" was wrong (the shell's card counts the same way, so the
+	// two now agree on the shape).
+	oneHidden := renderMcpResultAt(t, textResult(strings.Repeat("y", 205)), false, theme, 40)
+	if got := oneHidden[1]; !strings.Contains(got, "... (1 earlier line,") {
+		t.Errorf("hint = %q, want 1 earlier line", got)
+	}
+
 	// One long JSON line fills the screen when logical lines are counted.
 	single := strings.Repeat(`{"a":1,"b":2},`, 40)
 	oneLine := renderMcpResult(t, textResult(single), false, theme)

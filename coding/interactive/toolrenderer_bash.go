@@ -154,7 +154,7 @@ func (c *bashPreviewComponent) Render(width int) []string {
 		if expandHint == "" {
 			expandHint = KeyHint("app.tools.expand", "to expand")
 		}
-		hint := c.theme.Fg("muted", fmt.Sprintf("... (%d earlier lines,", skipped)) +
+		hint := c.theme.Fg("muted", fmt.Sprintf("... (%d%s", skipped, pluralEarlierLines(skipped))) +
 			" " + expandHint + c.theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 	}

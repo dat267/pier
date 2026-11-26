@@ -272,7 +272,7 @@ func (c *mcpResultComponent) Render(width int) []string {
 		// VisualLinePreview keeps the start for an MCP result, which left the
 		// hint above rows it did not describe). The reference truncates the hint
 		// to the frame width, so a narrow terminal keeps it on one line.
-		hint := c.theme.Fg("muted", "... ("+strconv.Itoa(len(visual)-mcpOutputPreviewLines)+" earlier lines,") +
+		hint := c.theme.Fg("muted", "... ("+strconv.Itoa(len(visual)-mcpOutputPreviewLines)+pluralEarlierLines(len(visual)-mcpOutputPreviewLines)) +
 			" " + KeyHint("app.tools.expand", "to expand") + c.theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 		lines = append(lines, visual[len(visual)-mcpOutputPreviewLines:]...)
@@ -340,4 +340,13 @@ func mcpFullOutputPath(result *SortToolResultContent) string {
 		return ""
 	}
 	return *details.FullOutputPath
+}
+
+// pluralEarlierLines renders the noun of the collapsed preview's count, so a
+// single hidden row does not read "1 earlier lines".
+func pluralEarlierLines(hidden int) string {
+	if hidden == 1 {
+		return " earlier line,"
+	}
+	return " earlier lines,"
 }

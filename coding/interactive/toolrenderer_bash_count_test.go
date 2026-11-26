@@ -10,12 +10,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
 // TestPlainWrappedLineCountMatchesTheGenericWrapper pins the fast path to
 // tui.WrapTextWithAnsi: tui.Text.Render is what the preview's line count must
 // agree with, so any divergence shows up as a wrong "... (N earlier lines)".
+// A single hidden row reads "1 earlier line", not "1 earlier lines"; the shell
+// card and the MCP card share the noun so the two cannot drift apart.
+func TestCollapsedPreviewHintCountsOneLine(t *testing.T) {
+	if got := pluralEarlierLines(1); got != " earlier line," {
+		t.Fatalf("pluralEarlierLines(1) = %q", got)
+	}
+	if got := pluralEarlierLines(35); got != " earlier lines," {
+		t.Fatalf("pluralEarlierLines(35) = %q", got)
+	}
+	theme := newRendererTestTheme(t)
+	// A body that wraps to exactly preview+1 visual rows hides one row.
+	component := &bashPreviewComponent{output: strings.Repeat("y", 205), state: &bashResultState{}, theme: theme}
+	rows := component.Render(40)
+	if len(rows) < 2 {
+		t.Fatalf("preview = %#v", rows)
+	}
+	if !strings.Contains(coding.StripAnsi(rows[1]), "(1 earlier line,") {
+		t.Fatalf("hint = %q", coding.StripAnsi(rows[1]))
+	}
+}
+
 func TestPlainWrappedLineCountMatchesTheGenericWrapper(t *testing.T) {
 	corpus := []string{
 		"", " ", "  ", "\t", "a", "a b c",

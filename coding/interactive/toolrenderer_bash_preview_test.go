@@ -15,7 +15,7 @@ func referenceBashPreview(raw string, width int, theme *Theme) []string {
 	preview := TruncateToVisualLines(styleBashOutput(raw, theme), bashPreviewLines, width, 0)
 	lines := []string{""}
 	if preview.SkippedCount > 0 {
-		hint := theme.Fg("muted", fmt.Sprintf("... (%d earlier lines,", preview.SkippedCount)) +
+		hint := theme.Fg("muted", fmt.Sprintf("... (%d%s", preview.SkippedCount, pluralEarlierLines(preview.SkippedCount))) +
 			" " + KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 	}
