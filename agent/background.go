@@ -223,8 +223,14 @@ func CompletionNotice(handle ToolCallHandle, result AgentToolResult) ai.Message 
 	if handle.OutputPath != "" {
 		where = fmt.Sprintf(" The full output is in %s.", handle.OutputPath)
 	}
-	text := fmt.Sprintf("Background call %s (%s) %s.%s\n\n%s",
-		handle.ID, handle.ToolName, status, where, clipBackgroundBody(body))
+	// How long the call took. A displaced call shows nothing until it finishes, so
+	// its duration is part of what the model learns here.
+	took := ""
+	if !handle.StartedAt.IsZero() {
+		took = " in " + formatBackgroundDuration(time.Since(handle.StartedAt))
+	}
+	text := fmt.Sprintf("Background call %s (%s) %s%s.%s\n\n%s",
+		handle.ID, handle.ToolName, status, took, where, clipBackgroundBody(body))
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
 }
 
@@ -244,7 +250,9 @@ func StartedNotice(handle ToolCallHandle) ai.Message {
 // completionNoticePattern matches the header CompletionNotice writes: the
 // handle, the tool, the outcome and the optional output file, then a blank line.
 var completionNoticePattern = regexp.MustCompile(
-	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (started|finished|failed)\.((?: The full output is in [^\n]*\.)?)\n\n`)
+	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (started|finished|failed)` +
+		`( in (?:\d+h \d+m \d+s|\d+m \d+s|\d+(?:\.\d+)?s))?\.` +
+		`((?: The full output is in [^\n]*\.)?)\n\n`)
 
 // ParseCompletionNotice splits a completion notice into its title ("bg-1
 // (bash) finished") and its body (the output-file line and the result), so a
@@ -255,9 +263,13 @@ func ParseCompletionNotice(text string) (title string, body string, ok bool) {
 	if match == nil {
 		return "", "", false
 	}
+	// Groups: handle, tool, status, " in <duration>", the output-file sentence.
 	title = text[match[2]:match[3]] + " (" + text[match[4]:match[5]] + ") " + text[match[6]:match[7]]
+	if match[8] >= 0 {
+		title += text[match[8]:match[9]]
+	}
 	body = text[match[1]:]
-	if where := strings.TrimSpace(text[match[8]:match[9]]); where != "" {
+	if where := strings.TrimSpace(text[match[10]:match[11]]); where != "" {
 		body = where + "\n\n" + body
 	}
 	return title, body, true
@@ -403,6 +415,7 @@ func executeWithBackground(
 		ToolCallID: prepared.toolCall.ID,
 		ToolName:   prepared.toolCall.Name,
 		OutputPath: outputPath,
+		StartedAt:  startedAt,
 	}
 	handle.Wait = func() AgentToolResult {
 		<-call.finished
@@ -564,4 +577,23 @@ func (o *backgroundOutput) discard() {
 	if path != "" {
 		_ = os.Remove(path)
 	}
+}
+
+// formatBackgroundDuration renders a call's duration the way the tool frame
+// renders "Took" (upstream formatDuration): tenths under a minute, then
+// minutes and seconds. Kept byte-identical to the frame's label so the notice
+// and the frame never disagree; agent cannot import coding, where that
+// formatter lives.
+func formatBackgroundDuration(d time.Duration) string {
+	seconds := d.Seconds()
+	if seconds < 60 {
+		return ai.JSNumberToFixed(seconds, 1) + "s"
+	}
+	totalSeconds := int(seconds)
+	minutes := totalSeconds / 60
+	remainder := totalSeconds % 60
+	if minutes < 60 {
+		return fmt.Sprintf("%dm %ds", minutes, remainder)
+	}
+	return fmt.Sprintf("%dh %dm %ds", minutes/60, minutes%60, remainder)
 }

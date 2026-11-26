@@ -630,8 +630,12 @@ func TestBackgroundNoticeClosesItsFrame(t *testing.T) {
 		t.Fatal("the frame stopped ticking while the call was still running")
 	}
 
-	// The finish notice finalizes and releases it.
-	finish := agent.CompletionNotice(agent.ToolCallHandle{ID: "bg-9", ToolName: "bash", OutputPath: "/tmp/x.log"},
+	// The finish notice finalizes and releases it. A real handle records its start,
+	// so the notice also states how long the call took ("… finished in 1m 30s");
+	// the status is then no longer the title's suffix, which must not stop it
+	// matching.
+	finish := agent.CompletionNotice(agent.ToolCallHandle{ID: "bg-9", ToolName: "bash", OutputPath: "/tmp/x.log",
+		StartedAt: time.Now().Add(-90 * time.Second)},
 		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}})
 	event := noticeFor(finish.(*ai.UserMessage).Content.Text)
 	event.Agent.Message = finish

@@ -9211,6 +9211,12 @@ The frame's time is the call's whole life, so a displaced call records no
 part the call spent in the foreground (a 91-second call read "Took 1m 0s"). The
 elapsed label measures the frame's own clock and stops at the finish notice.
 
+A finish notice also states how long the call took ("… finished in 1m 24s", or
+"in 2.4s" under a minute), in the same format the tool frame's "Took" label uses,
+because a displaced call shows nothing about itself until it ends and its duration
+is part of what the model learns there. The handle carries its start time for
+this; a handle built without one omits the duration rather than inventing it.
+
 Both notices are stored as ordinary user messages, but the transcript
 recognizes their exact header (as it recognizes a skill block) and draws each as
 a collapsed "[background] bg-… (bash) started/finished" block that expands to

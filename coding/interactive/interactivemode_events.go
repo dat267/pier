@@ -786,9 +786,15 @@ func (d *EventDispatcher) closeBackgroundFrameFromNotice(message ai.Message) boo
 		return false
 	}
 	// The start notice shares the header, so only the outcome arms close a frame:
-	// the call is still running when it starts.
-	failed := strings.HasSuffix(title, " failed")
-	if !failed && !strings.HasSuffix(title, " finished") {
+	// the call is still running when it starts. The status follows the tool name's
+	// closing paren, and a finished notice may add " in <duration>" after it, so
+	// match the status as a prefix rather than the title's suffix.
+	_, status, ok := strings.Cut(title, ") ")
+	if !ok {
+		return false
+	}
+	failed := strings.HasPrefix(status, "failed")
+	if !failed && !strings.HasPrefix(status, "finished") {
 		return false
 	}
 	handleID, _, _ := strings.Cut(title, " ")

@@ -709,6 +709,22 @@ func TestParseCompletionNotice(t *testing.T) {
 	if title, _, ok := ParseCompletionNotice(messageText(failed)); !ok || title != "bg-2 (github_search) failed" {
 		t.Fatalf("failed title = %q, ok = %v", title, ok)
 	}
+	// A real handle records when the call started, so the notice says how long the
+	// call took: a displaced call shows nothing until it finishes, and its duration
+	// is what the model needs to judge it.
+	timed := handle
+	timed.StartedAt = time.Now().Add(-90 * time.Second)
+	title, _, ok = ParseCompletionNotice(messageText(CompletionNotice(timed, AgentToolResult{})))
+	if !ok || title != "bg-1a2b3c (bash) finished in 1m 30s" {
+		t.Fatalf("timed title = %q, ok = %v", title, ok)
+	}
+	// A failed call reports its duration too.
+	timedFail := timed
+	timedFail.ID = "bg-9f9f"
+	if title, _, ok := ParseCompletionNotice(messageText(CompletionNotice(timedFail, AgentToolResult{IsError: true}))); !ok || title != "bg-9f9f (bash) failed in 1m 30s" {
+		t.Fatalf("failed timed title = %q, ok = %v", title, ok)
+	}
+
 	// The start notice shares the header, so the transcript draws it the same way.
 	started := StartedNotice(handle)
 	title, body, ok = ParseCompletionNotice(messageText(started))

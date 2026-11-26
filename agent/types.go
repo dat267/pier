@@ -302,6 +302,9 @@ type ToolCallHandle struct {
 	ToolName   string
 	// OutputPath is the file the call's output is being written to.
 	OutputPath string
+	// StartedAt is when the call began, so a notice can say how long it took. The
+	// zero time means unknown, and the notice then omits the duration.
+	StartedAt time.Time
 	// Done reports the call's final result once it ends. It closes exactly once.
 	Done func() AgentToolResult
 	// Wait blocks until the call ends and returns its final result.
