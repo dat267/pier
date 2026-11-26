@@ -599,4 +599,27 @@ func TestGoogleMultimodalResponseDistinguishesVersionZero(t *testing.T) {
 	if !supportsMultimodalFunctionResponse("x-gemini-3") {
 		t.Error("an id the pattern does not match at the start must default to support")
 	}
+	// A digit run too large for int64 is still a MATCH: the reference parses it with
+	// Number.parseInt, which yields a large float (1e20 for
+	// "gemini-99999999999999999999"), and google-shared.ts:182-188 answers
+	// `major >= 3` when the pattern matched. So a huge version reports multimodal
+	// support, the same as any other 3+. The port's strconv.Atoi errored and took
+	// that for "pattern did not match", which happens to reach the SAME answer via
+	// the unmatched default — the two paths differ only for the sibling question
+	// of whether the version parsed at all, which is why this is asserted through
+	// getGeminiMajorVersion as well.
+	// The observable difference is SupportsGoogleStrictToolSampling, which gates on
+	// `matched && major >= 3` (google-shared.ts:462-466): with Atoi erroring it
+	// answered false, and the reference answers true.
+	for _, id := range []string{"gemini-99999999999999999999", "gemini-9223372036854775808"} {
+		if major, matched := getGeminiMajorVersion(id); !matched || major < 3 {
+			t.Errorf("%s: major = %d matched = %v, want a parsed version 3 or above", id, major, matched)
+		}
+		if !SupportsGoogleStrictToolSampling(id) {
+			t.Errorf("%s parses to a version 3 or above, so strict tool sampling is supported", id)
+		}
+		if !supportsMultimodalFunctionResponse(id) {
+			t.Errorf("%s parses to a version 3 or above, so the reference reports multimodal support", id)
+		}
+	}
 }

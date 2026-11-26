@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of api/google-shared.ts: message/tool conversion and thinking-level
@@ -145,11 +148,18 @@ func getGeminiMajorVersion(modelID string) (major int, matched bool) {
 	if match == nil {
 		return 0, false
 	}
-	parsed, err := strconv.Atoi(match[1])
+	// Number.parseInt, not strconv.Atoi: a digit run too large for int64 still
+	// PARSES in JavaScript (Number.parseInt("99999999999999999999") is 1e20), so it
+	// counts as a match with a huge major version and the caller reports no
+	// multimodal support. Atoi errored, which this function reports as "the pattern
+	// did not match", flipping the answer to support.
+	value, err := strconv.ParseFloat(match[1], 64)
 	if err != nil {
-		return 0, false
+		// Only a digit run can reach the regexp's capture, so a parse failure means
+		// the value overflowed float64: still a match, saturating like JS Infinity.
+		return math.MaxInt, true
 	}
-	return parsed, true
+	return jsnum.ToInt(value), true
 }
 
 func supportsMultimodalFunctionResponse(modelID string) bool {
