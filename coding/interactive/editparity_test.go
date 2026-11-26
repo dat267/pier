@@ -193,6 +193,27 @@ func TestEditPreviewFallsBackToLegacyFields(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.2 renderers/edit.ts resolves the path in TWO places, and they
+// disagree on purpose: getRenderablePreviewInput prefers `path`, while formatEditCall
+// renders `file_path ?? path`. A call carrying both keys therefore previews the diff
+// of one file under the header of the other. That looked like a port bug during the
+// audit and a "fix" that unified them was tried and reverted; this pins the reference
+// so the next reader does not repeat it.
+func TestEditPreviewPathPrecedenceMatchesTheReference(t *testing.T) {
+	args := map[string]any{"path": "a.txt", "file_path": "b.txt", "oldText": "x", "newText": "y"}
+	preview := getRenderablePreviewInput(args)
+	if preview == nil || preview.Path != "a.txt" {
+		t.Fatalf("preview path = %+v, want `path` (getRenderablePreviewInput)", preview)
+	}
+	if preview.HasFilePath && preview.FilePath != "b.txt" {
+		t.Fatalf("file_path = %q, want it kept for the header", preview.FilePath)
+	}
+	theme := newRendererTestTheme(t)
+	if got := stripAnsiEscapes(formatEditCall(preview, theme, "/tmp")); !strings.Contains(got, "b.txt") {
+		t.Fatalf("header = %q, want file_path (formatEditCall's `file_path ?? path`)", got)
+	}
+}
+
 // Reference: pi v1.5.2 renderers/edit.ts renderResult publishes details.diff
 // whenever it is a string, so an empty diff clears a stale preview error.
 func TestEditResultEmptyDiffClearsPreviewError(t *testing.T) {
