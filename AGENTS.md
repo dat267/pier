@@ -115,6 +115,8 @@ change touches concurrency, cancellation, or shutdown, because those take
 seconds rather than minutes. Run the full gate yourself only when CI cannot see
 the change, or when a failure needs the whole-tree context to reproduce.
 
+A behaviour only the screen shows (a frame that keeps ticking, a notice block, a footer line) is checked live, not argued from code: `tmux` is installed, so run the real binary in a detached session, drive it with `tmux send-keys`, read the screen with `tmux capture-pane -p -S -200`, and kill the session afterwards. Export `TMUX_TMPDIR` to a private `chmod 700` directory first: this machine's `/tmp/tmux-1000` has loose permissions, and there every command except `new-session` fails. Point `PI_CODING_AGENT_DIR` at a temp directory, so a live check leaves no session behind in the real agent directory. That is how a backgrounded tool call's frame was confirmed to keep ticking with live output and then stop; no unit test shows it, because the tick lives in the render loop. CI has no tmux, so a live check supplements the tests and never replaces one.
+
 Keep tests quick: small fixtures, allocation checks instead of loops, fake
 sleeps, and never launch the developer's editor. Tests must use temporary agent
 state (`t.TempDir`/`t.Setenv`), not the real agent directory. Package `TestMain`s
