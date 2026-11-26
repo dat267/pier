@@ -5,7 +5,8 @@ package coding
 // re-encoded first (upstream #10292, ensurePngTranscoder). The decoders
 // registered in fileprocessor.go cover every inline type the sniffer accepts
 // (PNG, JPEG, GIF, WebP); a payload none of them decodes falls back to the text
-// placeholder.
+// placeholder. A JPEG or WebP's EXIF orientation is applied before encoding,
+// matching utils/image-convert.ts encodePng.
 
 import (
 	"bytes"
@@ -29,6 +30,11 @@ func EncodeImageAsPNG(base64Data string, mimeType string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
+	// A JPEG or WebP's EXIF orientation is applied before encoding, as upstream's
+	// encodePng does (utils/image-convert.ts calls applyExifOrientation). Go's
+	// decoders ignore the tag, so without this a rotated photo would be
+	// re-encoded unrotated and shown sideways in the terminal.
+	source = ApplyExifOrientation(source, ExifOrientation(decoded))
 	var buffer bytes.Buffer
 	if err := png.Encode(&buffer, source); err != nil {
 		return "", false
