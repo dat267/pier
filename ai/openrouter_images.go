@@ -225,28 +225,53 @@ func openAIAPIError(status int, raw []byte) (string, string) {
 	if text == "" {
 		return fmt.Sprintf("%d status code (no body)", status), ""
 	}
-	// The SDK parses `errorResponse.error` and uses its string `message` (or the
-	// stringified object) in the APIError message.
+	// makeMessage (node_modules/openai/src/core/error.ts:37-57) prefers
+	// `error.message`, JSON.stringify's it when it is not a string, else
+	// JSON.stringify's the whole `error`, else the fallback message; a falsy
+	// result becomes "<status> status code (no body)".
 	var envelope struct {
 		Error json.RawMessage `json:"error"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err == nil && len(envelope.Error) > 0 {
-		var inner map[string]json.RawMessage
-		if err := json.Unmarshal(envelope.Error, &inner); err == nil && len(inner) > 0 {
-			var compact bytes.Buffer
-			if json.Compact(&compact, envelope.Error) == nil {
-				descriptor := compact.String()
-				if message, ok := inner["message"]; ok {
-					var text string
-					if err := json.Unmarshal(message, &text); err == nil {
-						descriptor = text
-					}
-				}
-				return fmt.Sprintf("%d %s", status, descriptor), compact.String()
+		var compact bytes.Buffer
+		if json.Compact(&compact, envelope.Error) == nil {
+			descriptor := compact.String()
+			message := apiErrorMessagePart(envelope.Error)
+			if message == "" {
+				// A falsy `error` falls through to the fallback message.
+				message = descriptor
 			}
+			return fmt.Sprintf("%d %s", status, message), descriptor
 		}
 	}
 	return fmt.Sprintf("%d %s", status, text), text
+}
+
+// apiErrorMessagePart renders the `message` arm of the SDK's makeMessage: the
+// string itself, a stringified non-string message, or "" when the error has no
+// truthy `message` (which the caller then replaces with the whole error).
+func apiErrorMessagePart(raw json.RawMessage) string {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &object); err != nil || object == nil {
+		return ""
+	}
+	message, ok := object["message"]
+	if !ok {
+		return ""
+	}
+	var text string
+	if err := json.Unmarshal(message, &text); err == nil {
+		// A falsy JS value ("" / null) is not a message.
+		if text == "" {
+			return ""
+		}
+		return text
+	}
+	trimmed := JSTrim(string(message))
+	if trimmed == "null" || trimmed == "false" || trimmed == "0" || trimmed == `""` {
+		return ""
+	}
+	return trimmed
 }
 
 // buildOpenRouterImagesParams renders the chat completions payload.

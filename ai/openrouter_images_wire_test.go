@@ -172,3 +172,39 @@ func TestOpenRouterImagesUsageSaturatesHugeFiniteCounts(t *testing.T) {
 		t.Errorf("total tokens = %d, want %d", got, want)
 	}
 }
+
+// The openai SDK builds an APIError message with makeMessage
+// (node_modules/openai/src/core/error.ts:37-57): it prefers `error.message` and
+// JSON.stringify's it when that is not a string, else JSON.stringify's the whole
+// `error`, else uses the fallback message; a falsy result becomes
+// "<status> status code (no body)". The port stringified the whole envelope
+// whenever a `message` member existed, so a non-string message reported
+// {"message":{...}} and an empty or null message reported "500 " with nothing
+// after the status.
+func TestOpenAIAPIErrorMatchesTheSDKMessage(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status int
+		raw    string
+		want   string
+	}{
+		{"non-string message", 500, `{"error":{"message":{"a":1}}}`, `500 {"a":1}`},
+		{"empty message", 500, `{"error":{"message":""}}`, `500 {"message":""}`},
+		{"null message", 500, `{"error":{"message":null}}`, `500 {"message":null}`},
+		{"message only", 500, `{"error":{"message":"boom"}}`, `500 boom`},
+		{"no message", 500, `{"error":{"code":"x"}}`, `500 {"code":"x"}`},
+		{"stringified object message", 500, `{"error":{"message":{"a":1}}}`, `500 {"a":1}`},
+		{"stringified array message", 500, `{"error":{"message":[1,2]}}`, `500 [1,2]`},
+		{"truthy number message", 500, `{"error":{"message":true}}`, `500 true`},
+		{"falsy number message", 500, `{"error":{"message":0}}`, `500 {"message":0}`},
+		{"empty object", 500, `{"error":{}}`, `500 {}`},
+		{"no body", 400, ``, `400 status code (no body)`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			message, _ := openAIAPIError(tc.status, []byte(tc.raw))
+			if message != tc.want {
+				t.Fatalf("message = %q, want %q", message, tc.want)
+			}
+		})
+	}
+}
