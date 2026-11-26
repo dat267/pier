@@ -38,3 +38,29 @@ func TestIgnoredFramesAreNotLeaks(t *testing.T) {
 		t.Fatalf("id = %q", got)
 	}
 }
+
+// An ignored frame in the "created by" trailer must NOT hide the goroutine: the
+// trailer names the CREATOR, so a worker leaked from inside testing.runFuzzTests
+// or anything reached through installExitHook.func1 would never be reported.
+// Regression: the whole block was scanned, so every ignored frame silenced a
+// leak that merely mentioned it.
+func TestIgnoredFrameInTheCreatedByTrailerIsStillALeak(t *testing.T) {
+	for _, frame := range ignoredFrames {
+		if strings.HasPrefix(frame, "created by ") {
+			// An entry naming the trailer describes a goroutine the standard
+			// library spawns, which only ever appears there.
+			continue
+		}
+		stack := "goroutine 9 [chan receive]:\n" +
+			"pier/coding.(*worker).run(0x0)\n\t/code/worker.go:10 +0x1\n" +
+			"created by " + frame + " in goroutine 1\n\t/gopath.go:1 +0x2"
+		if isIgnored(stack) {
+			t.Fatalf("a leak created by %s was ignored", frame)
+		}
+		// The same frame as the goroutine's OWN function is still ignored.
+		own := "goroutine 9 [chan receive]:\n" + frame + "(0x0)\n\t/go.go:1 +0x1"
+		if !isIgnored(own) {
+			t.Fatalf("%s as its own frame must be ignored", frame)
+		}
+	}
+}

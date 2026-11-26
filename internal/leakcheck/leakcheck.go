@@ -139,8 +139,27 @@ func isCurrent(stack string) bool {
 }
 
 func isIgnored(stack string) bool {
+	// Only the goroutine's OWN frames count. The "created by" trailer names the
+	// creator, so scanning the whole block would hide a leak merely started from
+	// a context that mentions an ignored frame: a worker spawned by
+	// testing.runFuzzTests, or by anything reached through installExitHook.func1,
+	// would never be reported.
+	own := stack
+	trailer := ""
+	if at := strings.Index(stack, "\ncreated by "); at >= 0 {
+		own, trailer = stack[:at], stack[at+1:]
+	}
 	for _, frame := range ignoredFrames {
-		if strings.Contains(stack, frame) {
+		// An entry that names the trailer explicitly (it carries "created by ")
+		// describes a goroutine the standard library spawns, which only ever
+		// appears there; match it against the trailer.
+		if strings.HasPrefix(frame, "created by ") {
+			if trailer != "" && strings.Contains(trailer, frame) {
+				return true
+			}
+			continue
+		}
+		if strings.Contains(own, frame) {
 			return true
 		}
 	}

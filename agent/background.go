@@ -529,20 +529,22 @@ func (o *backgroundOutput) replace(text string, failed bool) {
 	o.last = text
 }
 
-// close releases the file.
+// close releases the file. The claim's release is host code, so it is taken
+// under the lock and called after unlocking, like every other callback here.
 func (o *backgroundOutput) close() {
 	if o == nil {
 		return
 	}
 	o.mu.Lock()
-	defer o.mu.Unlock()
 	if o.file != nil {
 		_ = o.file.Close()
 		o.file = nil
 	}
-	if o.release != nil {
-		o.release()
-		o.release = nil
+	release := o.release
+	o.release = nil
+	o.mu.Unlock()
+	if release != nil {
+		release()
 	}
 }
 
