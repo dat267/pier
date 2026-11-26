@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D547)
+# Deliberate divergences from pi (D1–D548)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9491,3 +9491,30 @@ the elements, the order, and the single-key bare-string shape are untouched.
 Tests: `TestResolvedBindingsUnsetIsAnEmptyArrayNotNil`,
 `TestGetKeysUnsetIsAnEmptyArrayNotNil`,
 `TestGetUserBindingsKeepsAnExplicitEmptyList`.
+
+### D548
+
+**The Windows path normalizer keeps a trailing separator and a relative path.**
+
+`isLegacyWslBashPath` compares a whole normalized path against the System32 and
+Sysnative launcher paths (`packages/coding-agent/src/utils/shell.ts`), so its
+answer is only as good as the normalizer underneath it. Pier's
+`normalizeWindowsPath` dropped a trailing separator and prefixed a separator onto
+every path, which diverged from `win32.normalize` in two ways:
+
+- `win32.normalize("C:\windows\system32\bash.exe\")` keeps one trailing separator,
+  so the reference does not treat that path as the launcher. Pier stripped it and
+  matched.
+- `win32.normalize("..\..\x\windows\system32\bash.exe")` stays relative, and the
+  fallback's `^[a-z]:\\windows\\(?:system32|sysnative)\\bash\.exe$` guard rejects
+  it. Pier rooted it to `\x\windows\system32\bash.exe` and could match.
+
+Both shapes are latent: the callers pass a `shellPath` setting and `%SystemRoot%`,
+neither of which produces a trailing separator or a drive-relative path. The
+normalizer also stays narrower than Node for shapes that cannot end with the
+launcher suffix (a `..` popping past the start, a lone `.`, a `\\?\` device
+prefix), so it is documented as a normalizer for the comparison rather than a port
+of `win32.normalize`.
+
+Tests: `TestNormalizeWindowsPathMatchesNode`,
+`TestIsLegacyWslBashPathRequiresDriveLetter`.
