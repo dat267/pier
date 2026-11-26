@@ -27,6 +27,18 @@ func TestMarshalJSONNeverSendsALoneSurrogate(t *testing.T) {
 	if want := "{\"text\":\"a\uFFFD\uFFFD\uFFFDb\uFFFDc😀\"}"; string(out) != want {
 		t.Fatalf("MarshalJSON = %s, want %s", out, want)
 	}
+	// The other half of the D253 argument: a `\ud800` escape cannot survive
+	// decoding into a Go string, so the only route to a lone surrogate is raw
+	// CESU-8 bytes, which the encoder above already normalises. The three
+	// replacement characters above are one 3-byte CESU-8 sequence, not three
+	// surrogates.
+	var decoded map[string]string
+	if err := json.Unmarshal([]byte("{\"text\":\"a\\ud800b\"}"), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if got := decoded["text"]; got != "a\uFFFDb" {
+		t.Fatalf("decoding a lone surrogate escape = %q, want %q", got, "a\uFFFDb")
+	}
 }
 
 // JSTrim must match String.prototype.trim(): the ECMAScript WhiteSpace and
