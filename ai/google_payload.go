@@ -99,11 +99,16 @@ func (p googleSDKPart) MarshalJSON() ([]byte, error) {
 var googleVertexOnlyReplacements = []string{"routingConfig", "modelSelectionConfig", "audioTimestamp"}
 
 const (
-	// googleModelArmorReplacement is rejected last by the Developer serializer.
-	googleModelArmorReplacement = "modelArmorConfig"
-	// googleCivicAnswersReplacement is the only member the Vertex serializer
-	// rejects (SDK generateContentConfigToVertex).
+	// googleModelArmorReplacement and googleGenerationOutputReplacement are the
+	// last two members the Developer serializer rejects, in that order (SDK
+	// generateContentConfigToMldev).
+	googleModelArmorReplacement       = "modelArmorConfig"
+	googleGenerationOutputReplacement = "generationOutputConfig"
+	// googleCivicAnswersReplacement and googleStoreReplacement are the two
+	// members the Vertex serializer rejects, in that order (SDK
+	// generateContentConfigToVertex): both are Developer-API-only.
 	googleCivicAnswersReplacement = "enableEnhancedCivicAnswers"
+	googleStoreReplacement        = "store"
 )
 
 func googleReplacementError(key string, api Api) error {
@@ -131,10 +136,16 @@ func googleValidateReplacements(config map[string]json.RawMessage, api Api) erro
 		if _, ok := config[googleModelArmorReplacement]; ok {
 			return googleReplacementError(googleModelArmorReplacement, api)
 		}
+		if _, ok := config[googleGenerationOutputReplacement]; ok {
+			return googleReplacementError(googleGenerationOutputReplacement, api)
+		}
 		return nil
 	}
 	if _, ok := config[googleCivicAnswersReplacement]; ok {
 		return googleReplacementError(googleCivicAnswersReplacement, api)
+	}
+	if _, ok := config[googleStoreReplacement]; ok {
+		return googleReplacementError(googleStoreReplacement, api)
 	}
 	return nil
 }

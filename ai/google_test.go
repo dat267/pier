@@ -520,4 +520,29 @@ func TestGoogleDeveloperRequestCarriesLabels(t *testing.T) {
 		!strings.Contains(err.Error(), "modelArmorConfig parameter is only supported in Gemini Enterprise Agent Platform mode") {
 		t.Fatalf("modelArmorConfig err = %v, want the Developer API rejection", err)
 	}
+
+	// generationOutputConfig is rejected right after modelArmorConfig by the
+	// Developer serializer (SDK generateContentConfigToMldev), and by no other
+	// member's check, so it is Vertex-only as well. Vertex itself accepts it.
+	output := json.RawMessage(`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{"generationOutputConfig":{}}}`)
+	if _, _, err := googleSDKRequest(output, APIGoogleGenerativeAI); err == nil ||
+		!strings.Contains(err.Error(), "generationOutputConfig parameter is only supported in Gemini Enterprise Agent Platform mode") {
+		t.Fatalf("generationOutputConfig err = %v, want the Developer API rejection", err)
+	}
+	// The Vertex serializer does not reject it.
+	if _, _, err := googleSDKRequest(output, APIGoogleVertex); err != nil {
+		t.Fatalf("the Vertex API rejected generationOutputConfig: %v", err)
+	}
+
+	// The Vertex serializer rejects both enableEnhancedCivicAnswers and store,
+	// in that order, as Developer-API-only members
+	// (SDK generateContentConfigToVertex). The config map is free-form, so a hook
+	// replacement can carry either.
+	for _, key := range []string{"enableEnhancedCivicAnswers", "store"} {
+		raw := json.RawMessage(`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{"` + key + `":{}}}`)
+		if _, _, err := googleSDKRequest(raw, APIGoogleVertex); err == nil ||
+			!strings.Contains(err.Error(), key+" parameter is only supported in Gemini Developer API mode") {
+			t.Fatalf("%s err = %v, want the Vertex API rejection", key, err)
+		}
+	}
 }
