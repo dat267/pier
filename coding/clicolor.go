@@ -155,7 +155,11 @@ func resolveForceColorLevel(getenv func(string) (string, bool), args []string) (
 	case "":
 		return 1, true
 	}
-	// parseInt stops at the first non-digit, so "2abc" is 2.
+	// Number.parseInt stops at the first non-digit, so "2abc" is 2 and " 2" is NaN.
+	// supports-color then takes Math.min(parsed, 3) and keeps the result only when
+	// it is one of 0..3. A digit run past int64 still parses in JavaScript
+	// (parseInt("99999999999999999999") is 1e20, clamped to 3), where strconv.Atoi
+	// errored and the port fell through to plain detection instead.
 	parsed := 0
 	for parsed < len(value) && value[parsed] >= '0' && value[parsed] <= '9' {
 		parsed++
@@ -163,11 +167,18 @@ func resolveForceColorLevel(getenv func(string) (string, bool), args []string) (
 	if parsed == 0 {
 		return flagLevel, hasFlag
 	}
-	number, err := strconv.Atoi(value[:parsed])
+	number, err := strconv.ParseFloat(value[:parsed], 64)
 	if err != nil {
-		return flagLevel, hasFlag
+		// Only digits reach here, so a parse failure is an overflow: parseInt would
+		// have produced a huge value that Math.min clamps to 3.
+		return 3, true
 	}
-	level := min(number, 3)
+	// Clamp in float before converting: int(1e20) is undefined in Go and yields the
+	// minimum int on some architectures.
+	level := 3
+	if number < 3 {
+		level = int(number)
+	}
 	if level < 0 {
 		return flagLevel, hasFlag
 	}

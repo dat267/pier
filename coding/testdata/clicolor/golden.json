@@ -2329,6 +2329,86 @@
 	},
 	{
 		"env": {
+			"FORCE_COLOR": "99999999999999999999"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "99999999999999999999"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "99999999999999999999"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "99999999999999999999"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9223372036854775808"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9223372036854775808"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9223372036854775808"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9223372036854775808"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
 			"FORCE_COLOR": "3"
 		},
 		"isTTY": true,

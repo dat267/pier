@@ -74,6 +74,11 @@ const envCases = [
 	{ FORCE_COLOR: "abc" },
 	{ FORCE_COLOR: "-1" },
 	{ FORCE_COLOR: "9" },
+	// A digit run past int64: Number.parseInt gives 1e20, Math.min clamps to 3, and
+	// [0,1,2,3].includes(3) keeps it, so the library answers "3 colors". The port's
+	// strconv.Atoi errored and it fell through to detection instead.
+	{ FORCE_COLOR: "99999999999999999999" },
+	{ FORCE_COLOR: "9223372036854775808" },
 	{ FORCE_COLOR: "3" },
 	{ FORCE_COLOR: "1", TERM: "dumb" },
 	{ NO_COLOR: "1", TERM: "xterm" },
