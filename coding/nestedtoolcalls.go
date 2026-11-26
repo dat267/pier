@@ -125,14 +125,14 @@ func (r *NestedCallRecorder) Snapshot() *ai.NestedToolCalls {
 	return &ai.NestedToolCalls{Calls: calls, Complete: r.complete && allFinished}
 }
 
-// truncateUTF16 keeps the first max UTF-16 code units (upstream `.slice`).
+// truncateUTF16 keeps the first max UTF-16 code units, matching `value.slice(0, max)`.
+// A NON-POSITIVE max counts from the end in JavaScript (slice(0, -1) drops the last
+// unit, slice(0, 0) is empty), so the boundary cannot simply be special-cased to "":
+// NestedCallLimits is exported and a caller may set MaxErrorChars that way.
 func truncateUTF16(value string, limit int) string {
-	if limit <= 0 {
-		return ""
-	}
-	// A string holds at least as many bytes as UTF-16 units, so a short one
-	// fits without counting; JSSlice walks only the kept prefix (D426, D517).
-	if len(value) <= limit || ai.JSLength(value) <= limit {
+	// A string holds at least as many bytes as UTF-16 units, so a short one fits
+	// without counting; JSSlice walks only the kept prefix (D426, D517).
+	if limit > 0 && (len(value) <= limit || ai.JSLength(value) <= limit) {
 		return value
 	}
 	return ai.JSSlice(value, 0, limit)

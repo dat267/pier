@@ -67,6 +67,38 @@ func TestNestedCallRecorderErrorTruncated(t *testing.T) {
 	}
 }
 
+// NestedCallLimits is an exported var, so a caller can set MaxErrorChars to a
+// NON-POSITIVE value. nested-tool-calls.ts uses `errorText.slice(0, max)`, where a
+// non-positive max counts from the END: slice(0,-1) drops the last character and
+// slice(0,0) is empty. The port returned "" for every non-positive limit, silently
+// losing an error message a caller had asked to keep.
+func TestNestedCallRecorderErrorLimitUsesJSSlice(t *testing.T) {
+	old := NestedCallLimits.MaxErrorChars
+	t.Cleanup(func() { NestedCallLimits.MaxErrorChars = old })
+	for _, tc := range []struct {
+		limit int
+		want  string
+	}{
+		{500, "abcdef"},
+		{3, "abc"},
+		{0, ""},
+		{-1, "abcde"},
+		{-2, "abcd"},
+	} {
+		NestedCallLimits.MaxErrorChars = tc.limit
+		recorder := NewNestedCallRecorder()
+		record := recorder.Start(nestedCall("c/1", "bash"))
+		recorder.Finish(record, true, "abcdef")
+		got := ""
+		if record.Error != nil {
+			got = *record.Error
+		}
+		if got != tc.want {
+			t.Fatalf("limit %d: error = %q, want %q", tc.limit, got, tc.want)
+		}
+	}
+}
+
 // The limits themselves are the reference's: 256 calls, 8 KiB per argument,
 // 32 KiB total, 500 error characters (nested-tool-calls.ts).
 func TestNestedCallLimitsMatchTheReference(t *testing.T) {
