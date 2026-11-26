@@ -152,33 +152,11 @@ func humanScheduleForDisplay(cron string) string {
 	return coding.HumanCronSchedule(cron)
 }
 
-// outcomeSuffix labels a one-shot job, since recurring is the default and saying
-// so on every row is noise.
-func outcomeSuffix(recurring bool) string {
-	if recurring {
-		return ""
-	}
-	return " (once)"
-}
-
 // singleLine flattens a prompt's whitespace so it renders as one argument. The
 // shell and MCP frames never truncate their arguments, so neither does this: the
 // frame wraps rather than cutting the user's text.
 func singleLine(text string) string {
 	return strings.Join(strings.Fields(text), " ")
-}
-
-// firstLineEllipsis keeps a prompt readable in a one-line frame.
-func firstLineEllipsis(text string, limit int) string {
-	trimmed := strings.TrimSpace(text)
-	if index := strings.IndexByte(trimmed, '\n'); index >= 0 {
-		trimmed = strings.TrimSpace(trimmed[:index]) + " …"
-	}
-	runes := []rune(trimmed)
-	if len(runes) <= limit {
-		return trimmed
-	}
-	return string(runes[:limit]) + "…"
 }
 
 // humanDelay renders a wakeup delay.
