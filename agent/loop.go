@@ -1015,7 +1015,10 @@ type backgroundPolicy struct {
 	registry   *backgroundRegistry
 	outputPath backgroundOutputPath
 	onRegister func(handle ToolCallHandle)
-	nextID     func() string
+	// claimOutput marks a call's output file as in use and returns the release,
+	// so the host's scratch sweep cannot delete output a running call still names.
+	claimOutput func(path string) func()
+	nextID      func() string
 }
 
 func executePreparedToolCall(ctx context.Context, prepared *preparedToolCallValue, emit AgentEventSink, policy *backgroundPolicy) executedToolCallOutcome {

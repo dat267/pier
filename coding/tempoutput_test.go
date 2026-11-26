@@ -127,3 +127,85 @@ func TestTempOutputSweepKeepsAnotherAccumulatorFile(t *testing.T) {
 		t.Fatalf("creating another output removed a still-active accumulator's file: %v", err)
 	}
 }
+
+// A backgrounded call's output file belongs to a RUNNING call: the finish notice
+// tells the model to read it, so the sweep must not delete it even when the
+// scratch budget is exceeded and it is the oldest file present. Regression: it
+// was not registered as active, so a sweep during a long call removed the path
+// the notice later named.
+func TestSweepTempOutputFilesKeepsALiveBackgroundOutput(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Now()
+	writeAged := func(name string, size int, age time.Duration) string {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, bytes.Repeat([]byte("x"), size), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		stamp := now.Add(-age)
+		if err := os.Chtimes(path, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	live := filepath.Join(dir, "pi-background-live.log")
+	writeAged("pi-output-a.log", 400, time.Minute)
+	writeAged("pi-output-b.log", 400, time.Second)
+	keep := writeAged("pi-output-keep.log", 0, 0)
+
+	// Create-and-register the background file the way the writer does (O_EXCL,
+	// then registered active), age it so a sweep would pick it first, then sweep
+	// past the budget.
+	file, err := createActiveTempOutput(live)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		unregisterActiveTempOutput(live)
+		_ = file.Close()
+	}()
+	if _, err := file.Write(bytes.Repeat([]byte("x"), 400)); err != nil {
+		t.Fatal(err)
+	}
+	stamp := now.Add(-time.Hour)
+	if err := os.Chtimes(live, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	sweepTempOutputFiles(dir, keep, 500)
+	if _, err := os.Stat(live); err != nil {
+		t.Fatalf("the live background output was swept: %v", err)
+	}
+}
+
+// ClaimBackgroundToolOutput keeps the file out of the sweep while the call runs
+// and returns it to the sweepable set once released.
+func TestClaimBackgroundToolOutputScopesTheSweep(t *testing.T) {
+	dir := t.TempDir()
+	live := filepath.Join(dir, "pi-background-call.log")
+	if err := os.WriteFile(live, make([]byte, 400), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	keep := filepath.Join(dir, "pi-output-keep.log")
+	if err := os.WriteFile(keep, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(live, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	release := ClaimBackgroundToolOutput(live)
+	sweepTempOutputFiles(dir, keep, 100)
+	if _, err := os.Stat(live); err != nil {
+		t.Fatalf("a claimed output was swept: %v", err)
+	}
+
+	release()
+	if err := os.Chtimes(live, old, old); err != nil {
+		t.Fatal(err)
+	}
+	sweepTempOutputFiles(dir, keep, 100)
+	if _, err := os.Stat(live); err == nil {
+		t.Fatal("a released output was not swept")
+	}
+}

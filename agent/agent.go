@@ -74,6 +74,10 @@ type AgentOptions struct {
 	BackgroundToolCalls func() time.Duration
 	// BackgroundOutputPath names a displaced call's output file.
 	BackgroundOutputPath func(toolCallID string) string
+	// ClaimBackgroundOutput marks that output file as in use until the returned
+	// release runs, so a scratch sweep does not delete output the call still
+	// names. Nil leaves the file unclaimed.
+	ClaimBackgroundOutput func(path string) func()
 	// OnToolBackgrounded is told about each displaced call.
 	OnToolBackgrounded func(handle ToolCallHandle)
 	// Deprecated: use FinishTurn.
@@ -338,6 +342,9 @@ type Agent struct {
 	// BackgroundOutputPath names the file a displaced call's output goes to. A nil
 	// one reports no path.
 	BackgroundOutputPath func(toolCallID string) string
+	// ClaimBackgroundOutput marks that file as in use for the call's lifetime, so
+	// the host's scratch sweep cannot delete output the notice still names.
+	ClaimBackgroundOutput func(path string) func()
 	// OnToolBackgrounded is told about each displaced call, so the host can wake
 	// the model once it ends.
 	OnToolBackgrounded func(handle ToolCallHandle)
@@ -425,6 +432,7 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		ShouldStopAfterTurn:        options.ShouldStopAfterTurn,
 		BackgroundToolCalls:        options.BackgroundToolCalls,
 		BackgroundOutputPath:       options.BackgroundOutputPath,
+		ClaimBackgroundOutput:      options.ClaimBackgroundOutput,
 		OnToolBackgrounded:         options.OnToolBackgrounded,
 		PrepareNextTurn:            options.PrepareNextTurn,
 		PrepareNextTurnWithContext: options.PrepareNextTurnWithContext,
@@ -827,11 +835,12 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 			// call outlives the run that started it. It is closed only by
 			// CloseBackgroundCalls, which the session calls when it is disposed.
 			config.backgroundPolicy = &backgroundPolicy{
-				threshold:  threshold,
-				registry:   a.backgroundRegistry(),
-				outputPath: a.BackgroundOutputPath,
-				onRegister: a.OnToolBackgrounded,
-				nextID:     newBackgroundHandleID,
+				threshold:   threshold,
+				registry:    a.backgroundRegistry(),
+				outputPath:  a.BackgroundOutputPath,
+				onRegister:  a.OnToolBackgrounded,
+				claimOutput: a.ClaimBackgroundOutput,
+				nextID:      newBackgroundHandleID,
 			}
 		}
 	}

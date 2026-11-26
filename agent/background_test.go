@@ -589,7 +589,7 @@ func TestBackgroundOutputFileHoldsLatestSnapshot(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "out.log")
-			output := newBackgroundOutput(path)
+			output := newBackgroundOutput(path, nil)
 			for _, piece := range tc.pieces {
 				output.write(piece)
 			}
@@ -738,5 +738,72 @@ func TestParseCompletionNotice(t *testing.T) {
 		if _, _, ok := ParseCompletionNotice(typed); ok {
 			t.Fatalf("%q was taken for a notice", typed)
 		}
+	}
+}
+
+// The host is told the output file is in use for the call's whole life, so its
+// scratch sweep cannot delete output the finish notice still names. The claim is
+// released once the file closes.
+func TestBackgroundOutputClaimedForTheCallsLife(t *testing.T) {
+	release := make(chan struct{})
+	slow := AgentTool{
+		Name:        "slow",
+		Description: "a slow call",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+		Execute: func(ctx context.Context, _ string, _ json.RawMessage, _ func(AgentToolResult)) (AgentToolResult, error) {
+			select {
+			case <-release:
+			case <-ctx.Done():
+				return AgentToolResult{}, ctx.Err()
+			}
+			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}, nil
+		},
+	}
+	handles := make(chan ToolCallHandle, 1)
+	streamFn, _ := mockStreamFn(
+		createAssistantMessage(ai.ContentList{
+			ai.ToolCall{ID: "call-1", Name: "slow", Arguments: json.RawMessage(`{}`)},
+		}, ai.StopToolUse),
+	)
+	var claimed, released int32
+	agentInstance, err := NewAgent(&AgentOptions{
+		InitialState:        &AgentInitialState{Model: createModel(), Tools: []AgentTool{slow}},
+		StreamFn:            streamFn,
+		ToolExecution:       ToolExecutionSequential,
+		BackgroundToolCalls: func() time.Duration { return 10 * time.Millisecond },
+		BackgroundOutputPath: func(string) string {
+			return filepath.Join(t.TempDir(), "out.log")
+		},
+		ClaimBackgroundOutput: func(string) func() {
+			atomic.AddInt32(&claimed, 1)
+			return func() { atomic.AddInt32(&released, 1) }
+		},
+		OnToolBackgrounded: func(handle ToolCallHandle) { handles <- handle },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sink := &recordingSink{}
+	unsubscribe := agentInstance.Subscribe(sink.listener)
+	defer unsubscribe()
+	if err := agentInstance.PromptMessages(context.Background(), []ai.Message{createUserMessage("go")}); err != nil {
+		t.Fatalf("prompt: %v", err)
+	}
+	select {
+	case <-handles:
+	case <-time.After(5 * time.Second):
+		t.Fatal("never backgrounded")
+	}
+	if atomic.LoadInt32(&claimed) != 1 {
+		t.Fatalf("claim calls = %d, want 1", claimed)
+	}
+	close(release)
+	agentInstance.CloseBackgroundCalls()
+	deadline := time.Now().Add(5 * time.Second)
+	for atomic.LoadInt32(&released) == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if atomic.LoadInt32(&released) != 1 {
+		t.Fatalf("release calls = %d, want 1", released)
 	}
 }

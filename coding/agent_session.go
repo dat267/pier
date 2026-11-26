@@ -375,6 +375,9 @@ type SessionConfig struct {
 	BackgroundToolCalls func() time.Duration
 	// BackgroundOutputPath names the file a displaced call's output goes to.
 	BackgroundOutputPath func(toolCallID string) string
+	// ClaimBackgroundOutput marks that file as in use for the call's lifetime, so
+	// the scratch sweep does not delete output the finish notice still names.
+	ClaimBackgroundOutput func(path string) func()
 	// Goal enables the builtin session-goal controller. The SDK sets it unless
 	// tools are disabled; upstream always has the extension host available.
 	Goal bool
@@ -475,7 +478,8 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		PrepareNextTurnWithContext: config.PrepareNextTurnWithContext,
 		// The harness's backgrounding policy: a tool call that outlives the
 		// threshold returns a handle and keeps running (D538). Zero disables it.
-		BackgroundToolCalls: config.BackgroundToolCalls,
+		BackgroundToolCalls:   config.BackgroundToolCalls,
+		ClaimBackgroundOutput: config.ClaimBackgroundOutput,
 		BackgroundOutputPath: func(toolCallID string) string {
 			if config.BackgroundOutputPath != nil {
 				return config.BackgroundOutputPath(toolCallID)

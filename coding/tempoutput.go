@@ -68,6 +68,20 @@ func BackgroundToolOutputPath(toolCallID string) string {
 	return filepath.Join(os.TempDir(), "pi-background-"+string(safe)+".log")
 }
 
+// ClaimBackgroundToolOutput marks a displaced call's output file as in use and
+// returns the release. Without it the file is a sweep candidate from the moment
+// it is created, so a sweep during a long call would delete the path the finish
+// notice later names, leaving the model a path that no longer exists.
+func ClaimBackgroundToolOutput(path string) func() {
+	activeTempOutputMu.Lock()
+	if activeTempOutputFiles == nil {
+		activeTempOutputFiles = map[string]struct{}{}
+	}
+	activeTempOutputFiles[path] = struct{}{}
+	activeTempOutputMu.Unlock()
+	return func() { unregisterActiveTempOutput(path) }
+}
+
 // sweepTempOutputFiles deletes this port's own temp output files in dir, oldest
 // first, until they occupy at most budget bytes. keep is the file that was just
 // created and is never deleted; its own growth is not counted, because its final

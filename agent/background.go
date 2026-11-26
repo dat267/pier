@@ -357,7 +357,7 @@ func executeWithBackground(
 	// the whole point of handing the agent a path. It is truncated once here so a
 	// reused path cannot show a previous call's output.
 	outputPath := policy.outputFilePath(prepared.toolCall.ID)
-	output := newBackgroundOutput(outputPath)
+	output := newBackgroundOutput(outputPath, policy.claimOutput)
 
 	done := make(chan completion, 1)
 	go func() {
@@ -474,12 +474,16 @@ type backgroundOutput struct {
 	mu   sync.Mutex
 	file *os.File
 	path string
+	// release unregisters the path once the file is closed. The host uses it to
+	// mark the file active so the scratch sweep cannot delete output a running
+	// call will still name.
+	release func()
 	// last is what the file holds, so a failure can keep the output before it.
 	last string
 }
 
 // newBackgroundOutput opens the file, or returns one that discards.
-func newBackgroundOutput(path string) *backgroundOutput {
+func newBackgroundOutput(path string, claim func(string) func()) *backgroundOutput {
 	if path == "" {
 		return &backgroundOutput{}
 	}
@@ -487,7 +491,11 @@ func newBackgroundOutput(path string) *backgroundOutput {
 	if err != nil {
 		return &backgroundOutput{path: path}
 	}
-	return &backgroundOutput{file: file, path: path}
+	output := &backgroundOutput{file: file, path: path}
+	if claim != nil {
+		output.release = claim(path)
+	}
+	return output
 }
 
 // write replaces the file's contents with text, if there is a file. A partial
@@ -531,6 +539,10 @@ func (o *backgroundOutput) close() {
 	if o.file != nil {
 		_ = o.file.Close()
 		o.file = nil
+	}
+	if o.release != nil {
+		o.release()
+		o.release = nil
 	}
 }
 
