@@ -20,8 +20,13 @@ func configureProcessGroup(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 }
 
-// killProcessGroup signals the whole process group.
+// killProcessGroup signals the whole process group. A non-positive pid is
+// refused: syscall.Kill(-0, sig) would signal pier's OWN process group, so the
+// guard matches processgroup_windows.go rather than relying on callers.
 func killProcessGroup(pid int, sig syscall.Signal) error {
+	if pid <= 0 {
+		return nil
+	}
 	return syscall.Kill(-pid, sig)
 }
 
