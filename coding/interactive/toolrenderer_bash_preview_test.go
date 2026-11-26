@@ -141,10 +141,10 @@ func BenchmarkGetTextOutput1000(b *testing.B) {
 	}
 }
 
-// D538: a call moved to the background renders a short line for the user, not
-// the model's instructions ("Continue with other work; do not wait for it…"),
-// which the frame used to print word for word. The details carry the handle, so
-// the frame needs no text parsing.
+// D538: a call moved to the background keeps the ordinary tool frame. The
+// handle's text is written for the model ("Continue with other work; do not wait
+// for it…"), and the start notice already tells the user the call is running, so
+// the frame shows neither it nor a line of its own about the log file.
 func TestBashFrameRendersBackgroundHandle(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	result := &SortToolResultContent{
@@ -158,12 +158,9 @@ func TestBashFrameRendersBackgroundHandle(t *testing.T) {
 		rendered = append(rendered, child.Render(120)...)
 	}
 	text := stripAnsiEscapes(strings.Join(rendered, "\n"))
-	for _, want := range []string{"background", "bg-7", "/tmp/pi-background-x.log"} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("the frame lacks %q:\n%s", want, text)
+	for _, unwanted := range []string{"background", "bg-7", "/tmp/pi-background-x.log", "do not wait", "Continue with other work"} {
+		if strings.Contains(text, unwanted) {
+			t.Fatalf("the frame shows %q:\n%s", unwanted, text)
 		}
-	}
-	if strings.Contains(text, "do not wait") || strings.Contains(text, "Continue with other work") {
-		t.Fatalf("the frame still shows the model's instructions:\n%s", text)
 	}
 }

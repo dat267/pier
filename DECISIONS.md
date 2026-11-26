@@ -9190,11 +9190,18 @@ Every session the CLI builds reads the threshold, including the first one and
 the RPC session replacement, which copies its options; print mode keeps it off,
 since no later turn wakes.
 
-The handle's text is written for the model, so every frame renders it from the
-handle's details instead (any tool can be displaced, so this is done where each
-frame's result is rendered, and in the fallback frame): "Moved to the background as bg-…. Output: <path>. A
-notice follows when it ends.", rather than printing "do not wait for it" at the
-user.
+The handle's text is written for the model ("do not wait for it…"), and the
+start notice already tells the user the call is running, so no frame renders a
+handle line at all: a displaced call keeps the ordinary tool frame pi gives every
+call, and the status result renders nothing (the live stream supplies the output
+as the call reports it). Printing the model's instructions as tool output and
+printing a note about the log file the notice already names were both worse than
+the plain frame.
+
+The frame's time is the call's whole life, so a displaced call records no
+`DurationMs` with its handle: a recorded duration would freeze the label at the
+part the call spent in the foreground (a 91-second call read "Took 1m 0s"). The
+elapsed label measures the frame's own clock and stops at the finish notice.
 
 Both notices are stored as ordinary user messages, but the transcript
 recognizes their exact header (as it recognizes a skill block) and draws each as
@@ -9236,7 +9243,9 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
 `TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
-`TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
+`TestBackgroundHandleRendersInEveryFrame`, `TestBackgroundNoticeClosesItsFrame`,
+`TestDispatcherKeepsABackgroundedFramePending`,
+`TestAgentEndStopsOrphanedFramesButKeepsABackgroundedOne`, `TestParseCompletionNotice`,
 `TestTranscriptBackgroundNotice`, `TestFooterHoldsOnlyContextModelAndDir`, `TestEditorLowerDividerCountsBackgroundCalls`,
 `TestEditorLowerDividerLabelTakesTheBorderColor`.
 

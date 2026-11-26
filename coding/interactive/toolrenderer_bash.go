@@ -57,41 +57,18 @@ type bashResultState struct {
 }
 
 // backgroundHandleDetails is the detail a call moved to the background carries
-// in place of its result (D538).
+// in place of its result (D538). The frame renders none of it: the call keeps
+// its ordinary tool frame, and the start notice says it is running.
 type backgroundHandleDetails struct {
-	Handle     string `json:"backgroundHandle"`
-	OutputPath string `json:"outputPath"`
-	// Finished marks a frame whose call has ended, so its line stops promising a
-	// notice that already arrived (D538).
-	Finished bool `json:"finished,omitempty"`
-}
-
-// backgroundHandleLine is the user-facing sentence for a result that is a
-// background handle: what happened and where the output is going.
-func backgroundHandleLine(result *SortToolResultContent) (string, bool) {
-	if result == nil {
-		return "", false
-	}
-	handle := toolDetailsFrom[backgroundHandleDetails](result.Details)
-	if handle == nil || handle.Handle == "" {
-		return "", false
-	}
-	line := "Moved to the background as " + handle.Handle
-	if handle.OutputPath != "" {
-		line += ". Output: " + handle.OutputPath
-	}
-	if handle.Finished {
-		return line + ". Its notice below has the result.", true
-	}
-	return line + ". A notice follows when it ends.", true
+	Handle string `json:"backgroundHandle"`
 }
 
 func rebuildBashResult(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme,
 	showImages bool, state *bashResultState) []tui.Component {
-	// The handle's text is written for the model ("do not wait for it"); the
-	// user needs what happened and where the output is going.
-	if line, ok := backgroundHandleLine(result); ok {
-		return []tui.Component{tui.NewText("\n"+theme.Fg("muted", line), 0, 0, nil)}
+	// A displaced call's result is a status for the model, not output: the start
+	// notice says the call is running, so the frame shows nothing for it (D538).
+	if isBackgroundHandle(result) {
+		return nil
 	}
 	children := make([]tui.Component, 0, 3)
 	output := strings.TrimSpace(GetTextOutput(result, showImages))
@@ -556,12 +533,21 @@ func usesElapsedTenths(name string) bool {
 
 // --- write ------------------------------------------------------------------
 
+// backgroundHandleID is the handle a displaced call's result names in place of
+// an outcome, or "" when the result is an outcome.
+func backgroundHandleID(result *SortToolResultContent) string {
+	if result == nil {
+		return ""
+	}
+	handle := toolDetailsFrom[backgroundHandleDetails](result.Details)
+	if handle == nil {
+		return ""
+	}
+	return handle.Handle
+}
+
 // isBackgroundHandle reports whether a result is the status a displaced call
 // returns instead of an outcome, so the caller can keep its frame alive.
 func isBackgroundHandle(result *SortToolResultContent) bool {
-	if result == nil {
-		return false
-	}
-	handle := toolDetailsFrom[backgroundHandleDetails](result.Details)
-	return handle != nil && handle.Handle != ""
+	return backgroundHandleID(result) != ""
 }

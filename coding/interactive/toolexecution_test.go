@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -117,10 +120,11 @@ func TestToolExecutionSelfShellRendersImages(t *testing.T) {
 	}
 }
 
-// D538: every tool can be moved to the background, not only bash, so the
-// user-facing handle line is applied where every frame renders its result. An
-// MCP frame printed the model's instructions ("do not wait for it…") as tool
-// output.
+// D538: the frame of a displaced call keeps pi's shape. The handle's text is
+// written for the model ("do not wait for it…"), and the start notice says the
+// call is running, so no frame prints a handle line of its own: an MCP frame once
+// showed the model's instructions as tool output, and a bash frame showed a note
+// about the log file the notice already names.
 func TestBackgroundHandleRendersInEveryFrame(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	result := &SortToolResultContent{
@@ -130,24 +134,23 @@ func TestBackgroundHandleRendersInEveryFrame(t *testing.T) {
 		Details: json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"slow_search","outputPath":"/tmp/pi-background-m.log"}`),
 	}
 	component := safeRenderResult(mcpRenderers("slow_search").RenderResult, result, ToolRenderResultOptions{}, theme, &ToolRenderContext{})
-	if component == nil {
-		t.Fatal("the MCP frame rendered nothing")
-	}
-	text := stripAnsiEscapes(strings.Join(component.Render(120), "\n"))
-	if !strings.Contains(text, "Moved to the background as bg-9") || !strings.Contains(text, "/tmp/pi-background-m.log") {
-		t.Fatalf("the MCP frame lacks the handle line:\n%s", text)
-	}
-	if strings.Contains(text, "do not wait") {
-		t.Fatalf("the MCP frame shows the model's instructions:\n%s", text)
+	if component != nil {
+		text := stripAnsiEscapes(strings.Join(component.Render(120), "\n"))
+		for _, unwanted := range []string{"bg-9", "/tmp/pi-background-m.log", "do not wait", "Moved to the background"} {
+			if strings.Contains(text, unwanted) {
+				t.Fatalf("the MCP frame shows %q:\n%s", unwanted, text)
+			}
+		}
 	}
 	// A tool with no result renderer takes the fallback frame, which shows the
-	// same line.
+	// model's text only because the handle is all the result holds: the live
+	// stream replaces it as soon as the call reports progress.
 	InitTheme("dark", false)
 	fallback := NewToolExecutionComponent("slow_tool", "c9", map[string]any{}, ToolExecutionOptions{},
 		WithBuiltInRenderers("slow_tool", nil), nil, "/tmp")
 	fallback.result = result
-	if got := stripAnsiEscapes(strings.Join(fallback.createResultFallback().Render(120), "\n")); !strings.Contains(got, "Moved to the background as bg-9") || strings.Contains(got, "do not wait") {
-		t.Fatalf("the fallback frame shows %q", got)
+	if got := stripAnsiEscapes(strings.Join(fallback.createResultFallback().Render(120), "\n")); strings.Contains(got, "Moved to the background") {
+		t.Fatalf("the fallback frame shows a handle line: %q", got)
 	}
 	// The transcript keeps the model's text: only the rendering changes.
 	if !strings.Contains(result.Content[0].Text, "do not wait") {
@@ -156,40 +159,73 @@ func TestBackgroundHandleRendersInEveryFrame(t *testing.T) {
 }
 
 // A displaced call has not finished, so its frame must keep rendering and
-// ticking with the live output instead of freezing at the handle. The caller
-// keeps it PARTIAL for that reason; a final result stops the ticker.
+// ticking with the live output instead of freezing. The start notice leaves it
+// running; the finish notice hands it the real elapsed time and stops the ticker.
 func TestBackgroundHandleFrameKeepsTicking(t *testing.T) {
-	theme := newRendererTestTheme(t)
+	newRendererTestTheme(t)
 	handle := &SortToolResultContent{
 		Content: []ToolResultContent{{Type: "text", Text: "moved to the background"}},
 		Details: json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"bash","outputPath":"/tmp/pi-background-m.log"}`),
 	}
-	if !isBackgroundHandle(handle) {
-		t.Fatal("the handle result was not recognized as a background handle")
-	}
-	// Once the call ends, the line must stop promising a notice it already sent.
-	finished := &SortToolResultContent{
-		Content: handle.Content,
-		Details: json.RawMessage(`{"backgroundHandle":"bg-9","outputPath":"/tmp/x.log","finished":true}`),
-	}
-	if line, ok := backgroundHandleLine(finished); !ok || strings.Contains(line, "A notice follows") {
-		t.Fatalf("finished line = %q", line)
+	if got := backgroundHandleID(handle); got != "bg-9" {
+		t.Fatalf("handle id = %q", got)
 	}
 	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
 		WithBuiltInRenderers("bash", nil), nil, "/tmp")
 	component.MarkExecutionStarted()
 	component.SetArgsComplete()
-	component.UpdateResult(handle, true)
+	component.MarkBackgrounded("bg-9")
 	if again, _ := component.AnimationFrame(time.Now()); !again {
 		t.Fatal("a backgrounded call's frame stopped ticking")
 	}
-	// Its completion is what hands the frame back, and a real result stops it.
-	component.UpdateResult(&SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "done"}}}, false)
-	if isBackgroundHandle(component.result) {
-		t.Fatal("the final result was still read as a handle")
-	}
+	component.FinalizeBackground(false)
 	if again, _ := component.AnimationFrame(time.Now()); again {
 		t.Fatal("a finished call's frame kept ticking")
 	}
-	_ = theme
+	if component.IsBackgrounded() {
+		t.Fatal("the frame still claims a running background call")
+	}
 }
+
+// A displaced call's time is its whole life. The handle carries no duration, so
+// the frame measures its own clock from execution start; recording the
+// foreground part would freeze a 91-second call at the 60-second threshold.
+func TestBackgroundedFrameTimeIsTheWholeCall(t *testing.T) {
+	newRendererTestTheme(t)
+	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	component.MarkExecutionStarted()
+	component.SetArgsComplete()
+	// The dispatcher must not record a duration for a handle.
+	dispatcher := NewEventDispatcher(NewTranscriptRenderer(&tui.Container{}, nil, nil, nil, nil), nil, nil, nil, nil, nil, nil)
+	dispatcher.pendingTools["c9"] = component
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c9", ToolName: "bash",
+		Result: agent.AgentToolResult{
+			Content: []ai.Content{ai.TextContent{Text: "moved"}},
+			Details: json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"bash","outputPath":"/tmp/x.log"}`),
+		},
+		DurationMs: ptrInt64(60000),
+	}})
+	if component.durationMs != nil {
+		t.Fatalf("the handle recorded a %dms duration, so the label would freeze at the foreground part", *component.durationMs)
+	}
+	if !component.IsBackgrounded() {
+		t.Fatal("the frame was not marked backgrounded")
+	}
+	// A normal call still records its own time (upstream #10549).
+	plain := NewToolExecutionComponent("bash", "c8", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	plain.MarkExecutionStarted()
+	dispatcher.pendingTools["c8"] = plain
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c8", ToolName: "bash",
+		Result:     agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}},
+		DurationMs: ptrInt64(1500),
+	}})
+	if plain.durationMs == nil || *plain.durationMs != 1500 {
+		t.Fatalf("a normal call lost its recorded duration: %v", plain.durationMs)
+	}
+}
+
+func ptrInt64(v int64) *int64 { return &v }

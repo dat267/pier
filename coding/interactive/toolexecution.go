@@ -119,7 +119,10 @@ type ToolExecutionComponent struct {
 	argsPending   bool
 	result        *SortToolResultContent
 	hideComponent bool
-	frames        *toolFrames
+	// backgroundHandle names the displaced call this frame shows, or "" once the
+	// call has ended (D538).
+	backgroundHandle string
+	frames           *toolFrames
 }
 
 // NewToolExecutionComponent creates the component.
@@ -222,9 +225,6 @@ func (c *ToolExecutionComponent) createCallFallback() tui.Component {
 
 func (c *ToolExecutionComponent) createResultFallback() tui.Component {
 	output := c.textOutput()
-	if line, ok := backgroundHandleLine(c.result); ok {
-		output = line
-	}
 	if output == "" {
 		return nil
 	}
@@ -320,6 +320,33 @@ func (c *ToolExecutionComponent) SetOutputPad(padding int) {
 
 func (c *ToolExecutionComponent) SetResultDuration(durationMs *int64) {
 	c.durationMs = durationMs
+}
+
+// MarkBackgrounded records that this call was moved to the background: its frame
+// keeps ticking and keeps rendering the output the call streams, and the call's
+// notice, not a tool_execution_end, is what finalizes it (D538).
+func (c *ToolExecutionComponent) MarkBackgrounded(handle string) {
+	c.backgroundHandle = handle
+	if c.host != nil {
+		c.host.RequestRender(false)
+	}
+}
+
+// IsBackgrounded reports whether the call this frame shows is still running in
+// the background.
+func (c *ToolExecutionComponent) IsBackgrounded() bool { return c.backgroundHandle != "" }
+
+// FinalizeBackground closes a displaced call's frame: the call has ended, so the
+// frame stops ticking and keeps the output it streamed. The time it shows is the
+// call's whole life, not the part it spent in the foreground, so no recorded
+// duration is set and the frame measures its own clock.
+func (c *ToolExecutionComponent) FinalizeBackground(isError bool) {
+	if c.result == nil {
+		c.result = &SortToolResultContent{}
+	}
+	c.result.IsError = isError
+	c.backgroundHandle = ""
+	c.UpdateResult(c.result, false)
 }
 
 func (c *ToolExecutionComponent) MarkExecutionStarted() {
@@ -590,13 +617,11 @@ func safeRenderResult(renderer func(*SortToolResultContent, ToolRenderResultOpti
 			component = nil
 		}
 	}()
-	// A background handle's text is written for the model (D538). Every tool
-	// can be displaced, so each frame gets the user-facing line as its output;
-	// the details stay, and the stored result is untouched.
-	if line, ok := backgroundHandleLine(result); ok {
-		shown := *result
-		shown.Content = []ToolResultContent{{Type: "text", Text: line}}
-		result = &shown
+	// A displaced call's result is a status for the model, not output: the start
+	// notice says the call is running, so the frame shows nothing for it rather
+	// than printing the model's instructions (D538).
+	if isBackgroundHandle(result) {
+		return nil
 	}
 	return renderer(result, options, theme, context)
 }

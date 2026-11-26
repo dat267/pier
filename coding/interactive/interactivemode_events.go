@@ -3,7 +3,6 @@ package interactive
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -604,17 +603,20 @@ func (d *EventDispatcher) handleToolExecutionEnd(event *coding.SessionEvent) {
 	}
 	result := sortToolResultFromAgent(agentEvent.Result)
 	result.IsError = agentEvent.IsError
-	// The recorded execution time comes from the agent event (upstream #10549).
-	component.SetResultDuration(agentEvent.DurationMs)
 	// A call moved to the background has not finished: the handle is a status,
-	// not an outcome. Keep its frame alive and PARTIAL so it keeps ticking and the
-	// displaced call's later updates still land (the agent streams them through
-	// ToolExecutionUpdate). Its own completion removes it, via the notice below.
-	if isBackgroundHandle(result) {
-		component.UpdateResult(result, true)
+	// not an outcome, and its text is written for the model. Keep the frame alive
+	// so it keeps ticking and the displaced call's later updates still land (the
+	// agent streams them through ToolExecutionUpdate), and let it keep rendering
+	// its ordinary tool frame: the start notice says the call is running, so the
+	// frame needs no line of its own. Its notice is what finalizes it, and the
+	// duration it reports is the call's whole life, not its foreground part.
+	if handle := backgroundHandleID(result); handle != "" {
+		component.MarkBackgrounded(handle)
 		d.requestRender()
 		return
 	}
+	// The recorded execution time comes from the agent event (upstream #10549).
+	component.SetResultDuration(agentEvent.DurationMs)
 	component.UpdateResult(result, false)
 	d.Transcript.goalActions.finish(agentEvent.ToolCallID, result, d.Transcript.Chat)
 	delete(d.pendingTools, agentEvent.ToolCallID)
@@ -756,7 +758,7 @@ func (d *EventDispatcher) finishOrphanedFrames() {
 			delete(d.pendingTools, callID)
 			continue
 		}
-		if isBackgroundHandle(component.result) {
+		if component.IsBackgrounded() {
 			continue
 		}
 		// A frame that never got a result is finalized with an empty one, so its
@@ -781,13 +783,12 @@ func (d *EventDispatcher) closeBackgroundFrameFromNotice(message ai.Message) boo
 	}
 	title, _, ok := agent.ParseCompletionNotice(user.Content.Text)
 	if !ok {
-		// "bg-abc (bash) started" and "… finished" both parse; the handle is the
-		// title's first word.
 		return false
 	}
 	// The start notice shares the header, so only the outcome arms close a frame:
 	// the call is still running when it starts.
-	if !strings.HasSuffix(title, " finished") && !strings.HasSuffix(title, " failed") {
+	failed := strings.HasSuffix(title, " failed")
+	if !failed && !strings.HasSuffix(title, " finished") {
 		return false
 	}
 	handleID, _, _ := strings.Cut(title, " ")
@@ -795,23 +796,10 @@ func (d *EventDispatcher) closeBackgroundFrameFromNotice(message ai.Message) boo
 		return false
 	}
 	for callID, component := range d.pendingTools {
-		if component == nil || component.result == nil {
+		if component == nil || component.backgroundHandle != handleID {
 			continue
 		}
-		details := toolDetailsFrom[backgroundHandleDetails](component.result.Details)
-		if details == nil || details.Handle != handleID {
-			continue
-		}
-		finishedDetails := *details
-		finishedDetails.Finished = true
-		detailsJSON, err := json.Marshal(finishedDetails)
-		if err != nil {
-			return false
-		}
-		component.UpdateResult(&SortToolResultContent{
-			Content: []ToolResultContent{{Type: "text", Text: "Output: " + details.OutputPath}},
-			Details: detailsJSON,
-		}, false)
+		component.FinalizeBackground(failed)
 		delete(d.pendingTools, callID)
 		return true
 	}
