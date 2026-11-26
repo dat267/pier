@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D554)
+# Deliberate divergences from pi (D1–D555)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9660,3 +9660,22 @@ existing check, so a known `toolCall` in the wrong list keeps failing.
 
 Tests: `TestUnknownContentBlockSurvivesRoundTrip`, `TestContentBlockWithoutTypeIsRejected`,
 `TestUserContentListRejectsToolCall`.
+
+### D555
+
+**The cost breakdown filters and sorts by the numeric cost.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding-agent/src/core/usage-totals.ts`. The breakdown
+entry is declared `{ key: string; cost: number; tokens: number }` (`:57-59`), but the object built
+at `:92-96` assigns `cost: totals.cost`, which is the `UsageCost` RECORD from `:44`, not a number.
+The filter at `:97` is therefore `entry.cost > 0`: an object compared to a number is `NaN > 0`,
+always false, so the condition collapses to `entry.tokens > 0` and a bucket with cost but no tokens
+is dropped. The sort at `:98` is `(a, b) => b.cost - a.cost`, which subtracts two objects, so it is
+`NaN` for every pair and `Array.prototype.sort` leaves the array in insertion order.
+
+The port compares `totals.Cost > 0` and sorts on `sort.SliceStable` by the numeric total, i.e. what
+both lines intend: a bucket that incurred a cost is shown, and the largest cost comes first. Only
+the ordering and the cost-only case differ; every bucket that has tokens appears on both sides, and
+a tie keeps insertion order, which is what the reference's no-op sort also produces.
+
+Test: `TestUsageCostBreakdownFiltersAndSortsByNumericCost`.

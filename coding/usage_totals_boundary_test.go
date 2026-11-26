@@ -105,3 +105,38 @@ func TestUsageEntriesAreAttributed(t *testing.T) {
 		t.Errorf("cost = %v", stats.Cost)
 	}
 }
+
+// D555: the reference's filter and sort compare `entry.cost` > 0 and
+// `b.cost - a.cost` where `cost` is the UsageCost OBJECT (usage-totals.ts:57-58
+// declares the field as number but :93 assigns `totals.cost`, the object). An
+// object compared to a number is NaN, so upstream's filter keeps only entries
+// with positive TOKENS and its sort is a no-op. The port compares the numeric
+// Total and sorts descending, which is what both lines intend.
+func TestUsageCostBreakdownFiltersAndSortsByNumericCost(t *testing.T) {
+	totalsByKey := map[string]UsageTotals{
+		// Cost only, no tokens: upstream's filter drops this because
+		// object > 0 is false; the port keeps it.
+		"costly": {Cost: 5},
+		// Real work, lower cost: must sort BELOW "costly".
+		"cheap": {Cost: 1, Input: 10},
+	}
+	got := rankUsageBreakdown([]string{"cheap", "costly"}, totalsByKey)
+	if len(got) != 2 {
+		t.Fatalf("entries = %+v, want both cost-bearing buckets", got)
+	}
+	if got[0].Key != "costly" || got[1].Key != "cheap" {
+		t.Fatalf("order = [%s %s], want costly before cheap (descending cost)", got[0].Key, got[1].Key)
+	}
+	// Ties keep insertion order, which is what a stable sort gives and what
+	// Array.prototype.sort would give if it compared numbers.
+	same := rankUsageBreakdown([]string{"a", "b", "c"}, map[string]UsageTotals{
+		"a": {Cost: 2}, "b": {Cost: 2}, "c": {Cost: 2},
+	})
+	var order []string
+	for _, entry := range same {
+		order = append(order, entry.Key)
+	}
+	if len(order) != 3 || order[0] != "a" || order[1] != "b" || order[2] != "c" {
+		t.Fatalf("tie order = %v, want insertion order", order)
+	}
+}
