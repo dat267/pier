@@ -143,3 +143,49 @@ func TestVisibleWidthIgnoresEscapes(t *testing.T) {
 		t.Fatalf("width = %d, want 6", w)
 	}
 }
+
+// runeWidth must agree with the table the terminal uses (get-east-asian-width via
+// x/text/width). A compact hand-written range list disagreed on 8868 East Asian
+// Wide/Fullwidth code points, including U+2705 (✅), U+2B50 (⭐) and U+231A (⌚), so a
+// line the layout measured as 20 cells occupied 40 and overflowed the row: the wrapped
+// rows never broke. Verified against the pinned get-east-asian-width, which answers 2
+// for each of these.
+func TestRuneWidthMatchesTheTerminalTable(t *testing.T) {
+	for _, tc := range []struct {
+		r    rune
+		want int
+	}{
+		{0x2705, 2}, // white heavy check mark
+		{0x2B50, 2}, // white medium star
+		{0x231A, 2}, // watch
+		{0x4E00, 2}, // CJK unified ideograph
+		{0x1F300, 2},
+		{0xFF21, 2}, // fullwidth A
+		{0x2318, 1}, // place of interest sign, neutral
+		{0x1F650, 1},
+		{'a', 1},
+		{0x0301, 0}, // combining acute
+		{0xFE0F, 0}, // variation selector
+	} {
+		if got := runeWidth(tc.r); got != tc.want {
+			t.Errorf("runeWidth(U+%04X) = %d, want %d", tc.r, got, tc.want)
+		}
+	}
+}
+
+// The consequence: a run of wide emoji must wrap, not stay on one row.
+func TestWideEmojiWrapAtTheirRealWidth(t *testing.T) {
+	rows := wrapPlain(strings.Repeat("✅", 20), 20)
+	if len(rows) < 2 {
+		t.Fatalf("20 check marks at 2 cells each stayed on %d row(s) of width 20", len(rows))
+	}
+	for _, row := range rows {
+		cells := 0
+		for _, r := range row {
+			cells += runeWidth(r)
+		}
+		if cells > 20 {
+			t.Errorf("row %q occupies %d cells, more than 20", row, cells)
+		}
+	}
+}

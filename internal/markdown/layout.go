@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"golang.org/x/text/width"
 	"strings"
 	"unicode/utf8"
 )
@@ -271,39 +272,37 @@ func visibleWidth(s string) int {
 	return width
 }
 
-// runeWidth is a compact East Asian width: zero-width for combining marks and
-// control bytes, double for the CJK/emoji ranges, otherwise one.
+// runeWidth reports a rune's terminal cell width. It is x/text/width, the table
+// tui/width.go already uses for the transcript: a compact hand-written range list
+// called U+2705 (white heavy check mark), U+2B50 (white medium star), U+231A (watch)
+// and 8865 other East Asian Wide/Fullwidth code points NARROW, so a line of them
+// wrapped at 20 cells actually occupied 40 and overflowed the row.
 func runeWidth(r rune) int {
-	switch {
-	case r == 0:
-		return 0
-	case r < 0x20:
-		return 0
-	case r >= 0x0300 && r <= 0x036f:
-		return 0
-	case r >= 0x1ab0 && r <= 0x1aff:
-		return 0
-	case r >= 0x20d0 && r <= 0x20ff:
-		return 0
-	case r >= 0xfe00 && r <= 0xfe0f:
-		return 0
-	case r >= 0x1100 && r <= 0x115f,
-		r >= 0x2e80 && r <= 0x303e,
-		r >= 0x3041 && r <= 0x33ff,
-		r >= 0x3400 && r <= 0x4dbf,
-		r >= 0x4e00 && r <= 0x9fff,
-		r >= 0xa000 && r <= 0xa4cf,
-		r >= 0xac00 && r <= 0xd7a3,
-		r >= 0xf900 && r <= 0xfaff,
-		r >= 0xfe30 && r <= 0xfe4f,
-		r >= 0xff00 && r <= 0xff60,
-		r >= 0xffe0 && r <= 0xffe6,
-		r >= 0x1f300 && r <= 0x1f64f,
-		r >= 0x1f900 && r <= 0x1f9ff,
-		r >= 0x20000 && r <= 0x3fffd:
+	if width.LookupRune(r).Kind() == width.EastAsianWide || width.LookupRune(r).Kind() == width.EastAsianFullwidth {
 		return 2
 	}
+	if isMarkdownZeroWidth(r) {
+		return 0
+	}
 	return 1
+}
+
+// isMarkdownZeroWidth covers the zero-width forms the layout must not count: control
+// bytes, combining marks and variation selectors, all of which occupy no cell.
+func isMarkdownZeroWidth(r rune) bool {
+	switch {
+	case r == 0 || r < 0x20:
+		return true
+	case r >= 0x0300 && r <= 0x036f:
+		return true
+	case r >= 0x1ab0 && r <= 0x1aff:
+		return true
+	case r >= 0x20d0 && r <= 0x20ff:
+		return true
+	case r >= 0xfe00 && r <= 0xfe0f:
+		return true
+	}
+	return false
 }
 
 // breakStyledToken splits a self-contained styled token (prefix, body, reset)
