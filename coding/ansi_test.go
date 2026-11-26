@@ -93,6 +93,25 @@ func TestStripAnsiMatchesPattern(t *testing.T) {
 			t.Fatalf("fuzz %d: StripAnsi(%q) = %q, want %q", i, value, got, want)
 		}
 	}
+
+	// Invalid UTF-8 and multibyte runes: the introducer test looks for the 0xc2
+	// lead byte of U+009B, so a bare 0xc2, a bare 0x9b, a truncated 3-byte rune
+	// and a lone invalid byte must all behave like the reference.
+	wideAlphabet := []string{
+		"\xc2", "\x9b", "\x1b", "é", "\xff", "\xc2\x9b", "[", "m", "0", "]",
+		"\xe4\xb8\x96", "a", "\xc2\x9b31m", "\x9c",
+	}
+	wideRNG := rand.New(rand.NewSource(33))
+	for i := range 30000 {
+		var sb strings.Builder
+		for range wideRNG.Intn(8) {
+			sb.WriteString(wideAlphabet[wideRNG.Intn(len(wideAlphabet))])
+		}
+		value := sb.String()
+		if got, want := StripAnsi(value), referenceStripAnsi(value); got != want {
+			t.Fatalf("wide fuzz %d: StripAnsi(%q) = %q, want %q", i, value, got, want)
+		}
+	}
 }
 
 func BenchmarkStripAnsiColoured(b *testing.B) {
