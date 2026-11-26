@@ -4405,6 +4405,14 @@ and the port only `int`. Resuming would need a fresh first-byte scan, itself
 linear over the run: on the 32 KiB input above, one refill took 673 ms, eight
 1.99 s and an unbounded refill 13.2 s, against a 315 ms baseline. A real fix
 needs the anchored submatcher to fail in O(1) per candidate.
+Re-measured after D523 landed: 8 KiB takes 46-51 ms, 16 KiB 221 ms and 32 KiB 448 ms, with
+a step between 8 and 10 KiB and linear growth after it, so the residual cost is linear in the
+input rather than quadratic. Raising the budget to 1<<20 restores the quadratic underneath
+(16 KiB 3.0 s), which is what confirms the budget is still what bounds the run. The cost sits
+at the submatcher's unanchored tail search; extending the exact walk does not help (a 1000x
+larger walk budget made 16 KiB slower, 222 ms to 475 ms), because falling back to the regexp
+is cheaper than walking further.
+
 `TestRejectedCandidateRunStopsAtBudget` pins the short-run reference behavior,
 the budget cutoff and the missing rule highlighting, and
 `BenchmarkHighlightRejectedRun` keeps the cost visible; this is the same
