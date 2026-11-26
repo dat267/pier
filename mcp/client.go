@@ -176,7 +176,8 @@ func (c *Client) ProtocolVersion() string {
 	return c.protocolVersionValue
 }
 
-// InitializeResult is the connect result.
+// Connect starts the transport and runs the initialize handshake, returning the
+// server's initialize result.
 func (c *Client) Connect(ctx context.Context, transport Transport) (*protocol.InitializeResult, error) {
 	c.mu.Lock()
 	if c.state != StateIdle {

@@ -28,7 +28,7 @@ import (
 // Port of core/settings-manager.ts (with the config constants it uses from
 // config.ts and the HTTP timeout helpers from core/http-dispatcher.ts).
 
-// CONFIG_DIR_NAME is the project config directory name.
+// ConfigDirName is the project config directory name (upstream CONFIG_DIR_NAME).
 const ConfigDirName = ".pi"
 
 // DefaultHTTPIdleTimeoutMS matches DEFAULT_HTTP_IDLE_TIMEOUT_MS.
