@@ -111,4 +111,14 @@ func TestBuiltinResultCaptureKeepsOnlyLargeKnownValues(t *testing.T) {
 	check("read value details", prepare("read", true), &SortToolResultContent{Content: largeText, Details: coding.ReadToolDetails{}}, false)
 	disabled := NewToolExecutionComponent("bash", "call", map[string]any{"command": "ls"}, ToolExecutionOptions{}, WithBuiltInRenderers("bash", nil), nil, "/tmp")
 	check("disabled frames", disabled, &SortToolResultContent{Content: largeText}, false)
+	// A displaced call keeps its ordinary frame and streams its output, so its
+	// large result still takes the capture path: the handle is a status, not a
+	// reason to render nothing at all. It reaches here only if a background handle
+	// is not special-cased ahead of the capture (D538).
+	displaced := prepare("bash", true)
+	displaced.MarkBackgrounded("bg-1")
+	check("displaced call", displaced, &SortToolResultContent{
+		Content: largeText,
+		Details: json.RawMessage(`{"backgroundHandle":"bg-1","outputPath":"/tmp/x.log"}`),
+	}, true)
 }

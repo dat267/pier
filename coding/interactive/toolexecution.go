@@ -327,6 +327,9 @@ func (c *ToolExecutionComponent) SetResultDuration(durationMs *int64) {
 // notice, not a tool_execution_end, is what finalizes it (D538).
 func (c *ToolExecutionComponent) MarkBackgrounded(handle string) {
 	c.backgroundHandle = handle
+	// Redraw: the frame keeps its ordinary shape, and the header's target state
+	// changes from pending to background.
+	c.updateDisplay()
 	if c.host != nil {
 		c.host.RequestRender(false)
 	}
