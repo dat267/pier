@@ -134,14 +134,27 @@ func ConvertToLlm(messages []ai.Message) []ai.Message {
 	}
 	for _, m := range messages {
 		switch msg := m.(type) {
-		case *ai.SystemMessage, *ai.UserMessage:
+		case *ai.SystemMessage:
+			out = append(out, m)
+		case *ai.UserMessage:
+			// A user turn ends the batch the note was waiting behind: the call
+			// will never be answered now, so release the note where it was written
+			// rather than at the end of the transcript.
+			clear(pendingToolCalls)
+			flushHeld()
 			out = append(out, m)
 		case *ai.AssistantMessage:
+			// A new assistant message ends the previous batch: any call still
+			// unanswered is abandoned, so a note held behind such a call must be
+			// released here rather than carried to the end of the transcript, past
+			// turns it should precede. Clear first, since flushHeld waits for the
+			// set to be empty.
 			if pendingToolCalls == nil {
 				pendingToolCalls = map[string]bool{}
 			} else {
 				clear(pendingToolCalls)
 			}
+			flushHeld()
 			for _, block := range msg.Content {
 				if call, ok := block.(ai.ToolCall); ok {
 					pendingToolCalls[call.ID] = true

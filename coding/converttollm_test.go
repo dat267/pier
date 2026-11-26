@@ -35,6 +35,52 @@ func TestConvertToLlmDefersCustomMessageBetweenToolCallAndResult(t *testing.T) {
 	}
 }
 
+// The note is held only to clear the ONE gap it landed in. A later turn that never
+// answers the call must not carry the note forward: pendingToolCalls is cleared by
+// the next assistant message, so a note still held at that point was being flushed
+// only at the very end of the transcript, after a user turn it should have preceded.
+func TestConvertToLlmDoesNotCarryAHeldNoteAcrossATurn(t *testing.T) {
+	call := &ai.AssistantMessage{
+		Content:    ai.ContentList{ai.ToolCall{ID: "c1", Name: "t", Arguments: json.RawMessage(`{}`)}},
+		StopReason: ai.StopToolUse,
+	}
+	note := &ai.CustomMessage{Role: RoleCustom, Timestamp: 1,
+		Content: json.RawMessage(`{"customType":"note","content":"note text"}`)}
+	user := &ai.UserMessage{Content: ai.StringOrBlocks{Text: "next turn"}}
+
+	converted := ConvertToLlm([]ai.Message{call, note, user})
+	var order []string
+	for _, m := range converted {
+		switch v := m.(type) {
+		case *ai.UserMessage:
+			// The custom note projects onto a user message, so identify it by its
+			// text rather than by the Go type.
+			text := v.Content.Text
+			for _, b := range v.Content.Blocks {
+				if tb, ok := b.(ai.TextContent); ok {
+					text += tb.Text
+				}
+			}
+			if text == "note text" {
+				order = append(order, "note")
+			} else {
+				order = append(order, "user:"+text)
+			}
+		case *ai.AssistantMessage:
+			order = append(order, "assistant")
+		}
+	}
+	want := []string{"assistant", "note", "user:next turn"}
+	if len(order) != len(want) {
+		t.Fatalf("order = %v, want %v", order, want)
+	}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("order = %v, want %v (the held note crossed a turn boundary)", order, want)
+		}
+	}
+}
+
 // assertToolResultsFollowToolCalls walks the wire sequence the way an
 // OpenAI-compatible provider does: a tool message may only follow an assistant
 // message that declared its tool_call_id, or another tool message from that
@@ -76,4 +122,47 @@ func containsUserText(messages []ai.Message, needle string) bool {
 		}
 	}
 	return false
+}
+
+// A note held behind a call that IS answered later must still land after that
+// result, not before it: providers require the result to follow its call.
+func TestConvertToLlmKeepsAHeldNoteAfterItsAnsweringResult(t *testing.T) {
+	call := &ai.AssistantMessage{
+		Content:    ai.ContentList{ai.ToolCall{ID: "c1", Name: "t", Arguments: json.RawMessage(`{}`)}},
+		StopReason: ai.StopToolUse,
+	}
+	note := &ai.CustomMessage{Role: RoleCustom, Timestamp: 1,
+		Content: json.RawMessage(`{"customType":"note","content":"note text"}`)}
+	result := &ai.ToolResultMessage{ToolCallID: "c1", ToolName: "t",
+		Content: ai.UserContentList{ai.TextContent{Text: "ok"}}}
+
+	converted := ConvertToLlm([]ai.Message{call, note, result})
+	var order []string
+	for _, m := range converted {
+		switch v := m.(type) {
+		case *ai.ToolResultMessage:
+			order = append(order, "result")
+		case *ai.UserMessage:
+			text := v.Content.Text
+			for _, b := range v.Content.Blocks {
+				if tb, ok := b.(ai.TextContent); ok {
+					text += tb.Text
+				}
+			}
+			if text == "note text" {
+				order = append(order, "note")
+			}
+		case *ai.AssistantMessage:
+			order = append(order, "assistant")
+		}
+	}
+	want := []string{"assistant", "result", "note"}
+	if len(order) != len(want) {
+		t.Fatalf("order = %v, want %v", order, want)
+	}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("order = %v, want %v", order, want)
+		}
+	}
 }
