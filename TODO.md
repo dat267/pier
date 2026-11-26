@@ -56,10 +56,20 @@ FIFO or a directory before any read, so a dangling symlink or a pipe is handled 
 The remaining trigger is permissions that allow `stat` but deny `read`, or a race on file
 replacement.
 
-Why not fixed here: it is consistent across both ported call sites, so fixing one would
-leave the other inconsistent. The warning is also colored stderr, which has to route
-through D381's supports-color decision rather than a bare `fmt.Fprintln`. Doing it
-properly means one small helper used by both sites plus a test per site.
+Why not fixed here, and why a literal port would be wrong: upstream's `console.error`
+writes straight to stderr, and nothing redirects console in interactive mode
+(`modes/interactive/interactive-mode.ts` has no console patch), so pi's own warning
+corrupts the TUI frame it is drawn over. Pier has a collected-diagnostics display for
+skills, prompts and themes (`loadedresources.go`, upstream's `themeDiagnostics`), but
+upstream does not route context-file failures through it either. A faithful port would
+therefore reproduce a screen-corrupting write.
+
+The right fix is to collect context-file read failures as resource diagnostics and show
+them in that existing section, which is a behaviour improvement over the reference rather
+than a parity repair, so it needs a D-row. It also has to reach both loaders, and
+`coding/contextfiles.go` has no output channel to thread one through: adding a stderr
+write inside the resource loader would put I/O in a library layer that callers like
+`resourceOptions.contextFiles` do not expect.
 
 Tests that must stay green: `TestLoadContextFileFromDirPreference`,
 `TestLoadProjectContextFilesLayering`, `TestLoadContextFileFromDirSkipsDirectories`, and
