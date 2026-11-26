@@ -26,6 +26,13 @@ func TestOpenRouterPerMillionFollowsParseFloat(t *testing.T) {
 		// parseFloat stops at the first invalid character and keeps the prefix.
 		{rawPrice("0.5abc"), 0, 500000},
 		{rawPrice("1,5"), 0, 1_000_000},
+		// parseFloat stops at "_", so "1_000000" is 1 per token, i.e. 1,000,000 per
+		// million tokens. Go's fmt.Sscan accepts underscores BETWEEN DIGITS as
+		// separators and read it as one million per token, squaring the error into
+		// 1e12. This is a cost, not a label.
+		{rawPrice("1_000000"), 0, 1_000_000},
+		{rawPrice("1_0"), 0, 1_000_000},
+		{rawPrice("0.000001_5"), 0, 1},
 		// Leading and trailing whitespace is allowed.
 		{rawPrice("  0.25  "), 0, 250000},
 		// Negative prices (OpenRouter's router models report -1) and invalid

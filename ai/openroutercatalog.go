@@ -185,9 +185,15 @@ func openRouterPerMillion(raw json.RawMessage, fallback float64) float64 {
 		if json.Unmarshal(raw, &text) != nil {
 			return fallback
 		}
-		if _, err := fmt.Sscan(text, &value); err != nil {
+		// Number.parseFloat, not fmt.Sscan: Sscan accepts underscores BETWEEN
+		// DIGITS as separators, so "1_000000" parsed as one million where
+		// parseFloat stops at the underscore and reads 1. That inflates a real
+		// cost by a factor of a million.
+		parsed, ok := parseJSFloatPrefix(text)
+		if !ok {
 			return fallback
 		}
+		value = parsed
 	} else if err := json.Unmarshal(raw, &value); err != nil {
 		return fallback
 	}
