@@ -168,11 +168,15 @@ func ResolveCloudflareModel(model *ai.Model, env ai.ProviderEnv) *ai.Model {
 	if len(env) == 0 || model == nil {
 		return model
 	}
+	// cloudflare-stream.ts uses `env[NAME] ?? "{NAME}"`, a NULLISH check: a member
+	// that is present but empty substitutes the empty string, and only an absent
+	// member keeps the marker. Requiring a non-empty value left the placeholder in
+	// the URL and sent it to the API.
 	baseURL := model.BaseURL
-	if value, ok := env[CloudflareAccountIDEnv]; ok && value != "" {
+	if value, ok := env[CloudflareAccountIDEnv]; ok {
 		baseURL = replaceAllLiteral(baseURL, "{"+CloudflareAccountIDEnv+"}", value)
 	}
-	if value, ok := env[CloudflareGatewayIDEnv]; ok && value != "" {
+	if value, ok := env[CloudflareGatewayIDEnv]; ok {
 		baseURL = replaceAllLiteral(baseURL, "{"+CloudflareGatewayIDEnv+"}", value)
 	}
 	if baseURL == model.BaseURL {

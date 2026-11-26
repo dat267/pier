@@ -154,6 +154,15 @@ func TestResolveCloudflareModel(t *testing.T) {
 		t.Fatalf("baseUrl = %s", unchanged.BaseURL)
 	}
 
+	// An env member PRESENT but empty substitutes the empty string, because
+	// cloudflare-stream.ts:11-13 is `env[A] ?? "{A}"` — a nullish check, not a
+	// truthiness one. The port required value != "", which left the placeholder in
+	// place and sent it to the API; `??` only falls back when the key is absent.
+	emptyAccount := ResolveCloudflareModel(model, ai.ProviderEnv{CloudflareAccountIDEnv: ""})
+	if want := "https://api.cloudflare.com/client/v4/accounts//ai/v1"; emptyAccount.BaseURL != want {
+		t.Fatalf("empty account id: baseUrl = %q, want %q", emptyAccount.BaseURL, want)
+	}
+
 	// Both placeholders resolve for the gateway routes.
 	gateway := &ai.Model{BaseURL: CloudflareAIGatewayAnthropicBaseURL}
 	gatewayResolved := ResolveCloudflareModel(gateway, ai.ProviderEnv{
