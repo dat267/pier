@@ -598,7 +598,10 @@ func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponen
 					syncPrefix, failurePrefix = "Saved API key for", "Failed to save API key for"
 				}
 				w.reportLoginError(err, providerName, syncPrefix, failurePrefix)
-				if err.Error() == coding.AuthLoginCancelledMessage && onBack != nil {
+				// Return the user to the previous screen on ANY cancelled login,
+				// including the bare context.Canceled the credential queue can
+				// surface, not just the sentinel text.
+				if (errors.Is(err, context.Canceled) || err.Error() == coding.AuthLoginCancelledMessage) && onBack != nil {
 					onBack()
 				}
 				return
@@ -691,9 +694,14 @@ func (w *AuthWiring) reportLoginError(err error, providerName string, syncPrefix
 		w.showError(syncPrefix + " " + providerName + ", but local model state could not be synchronized: " + err.Error())
 		return
 	}
-	if err.Error() != coding.AuthLoginCancelledMessage {
-		w.showError(failurePrefix + " " + providerName + ": " + err.Error())
+	// A cancelled login is the user backing out, not a failure: the reference
+	// throws Error("Login cancelled") when the prompt signal aborts
+	// (interactive-mode.ts:6542). Login can surface that as the sentinel text OR
+	// as the credential queue's bare context.Canceled, so both stay quiet.
+	if errors.Is(err, context.Canceled) || err.Error() == coding.AuthLoginCancelledMessage {
+		return
 	}
+	w.showError(failurePrefix + " " + providerName + ": " + err.Error())
 }
 
 func (w *AuthWiring) newLoginDialog(providerID, providerName, title string, onComplete func(bool, string)) *LoginDialogComponent {

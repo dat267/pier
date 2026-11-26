@@ -2,6 +2,8 @@ package interactive
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -374,5 +376,33 @@ func TestAuthProviderOptionsPreferPartners(t *testing.T) {
 			t.Fatalf("remaining providers are not sorted by name: %q > %q", *last, name)
 		}
 		last = &name
+	}
+}
+
+// A cancelled login must stay quiet, like the reference: upstream throws
+// Error("Login cancelled") when the prompt signal aborts
+// (interactive-mode.ts:6542), and the interactive flow treats that as the user
+// backing out rather than a failure. Login can also return the bare
+// context.Canceled from the credential queue's own select, which used to reach
+// the user as "Failed to login to <provider>: context canceled".
+func TestReportLoginErrorStaysQuietForACancelledLogin(t *testing.T) {
+	var shown []string
+	wiring := &AuthWiring{ShowError: func(message string) { shown = append(shown, message) }}
+	for _, err := range []error{
+		context.Canceled,
+		errLoginCancelled{},
+		fmt.Errorf("wrapped: %w", context.Canceled),
+	} {
+		shown = nil
+		wiring.reportLoginError(err, "Anthropic", "Logged in to", "Failed to login to")
+		if len(shown) != 0 {
+			t.Fatalf("reportLoginError(%v) showed %q, want nothing", err, shown)
+		}
+	}
+	// A real failure still reports.
+	shown = nil
+	wiring.reportLoginError(errors.New("boom"), "Anthropic", "Logged in to", "Failed to login to")
+	if len(shown) != 1 || shown[0] != "Failed to login to Anthropic: boom" {
+		t.Fatalf("real failure showed %q", shown)
 	}
 }
