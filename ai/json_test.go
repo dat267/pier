@@ -3,7 +3,9 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -31,6 +33,77 @@ func TestCanonicalJSONIsNormalized(t *testing.T) {
 		if canonicalJSONIsNormalized([]byte(input)) {
 			t.Errorf("canonicalJSONIsNormalized(%q) = true", input)
 		}
+	}
+}
+
+// The fast filter is a soundness gate, not a convenience: saying "normalized"
+// skips the canonical encoder entirely, so a false positive persists or sends
+// bytes that were never canonicalized. TestCanonicalJSONIsNormalized checks
+// acceptance one input at a time; this checks the PROPERTY over generated JSON —
+// whenever the filter accepts, the full encoder must return the input unchanged.
+func TestCanonicalJSONFastFilterIsSound(t *testing.T) {
+	rng := rand.New(rand.NewSource(7))
+	keys := []string{`"a"`, `"b"`, `"1"`, `"0"`, `"01"`, `"10"`, `"2"`, `""`, `"é"`, `"😀"`, `"\u0041"`, `"\u001f"`, `"\u0008"`, `"\/"`}
+	values := []string{`1`, `-0`, `0`, `1.0`, `1e3`, `1E3`, `"x"`, `"\u001f"`, `true`, `null`, `[]`, `{}`, `1e21`, `0.5`}
+	spaces := []string{"", " ", "\n", "\t", "  "}
+	pick := func(list []string) string { return list[rng.Intn(len(list))] }
+	var gen func(depth int) string
+	gen = func(depth int) string {
+		if depth > 3 || rng.Intn(3) == 0 {
+			return pick(values)
+		}
+		if rng.Intn(2) == 0 {
+			n := rng.Intn(3)
+			parts := make([]string, n)
+			for i := range parts {
+				parts[i] = gen(depth + 1)
+			}
+			s := "["
+			for i, p := range parts {
+				if i > 0 {
+					s += pick(spaces) + "," + pick(spaces)
+				}
+				s += p
+			}
+			return s + "]"
+		}
+		n := rng.Intn(3)
+		s := "{" + pick(spaces)
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				s += pick(spaces) + "," + pick(spaces)
+			}
+			s += pick(keys) + pick(spaces) + ":" + pick(spaces) + gen(depth+1)
+		}
+		return s + pick(spaces) + "}"
+	}
+	seeded := []string{`1E3`, `1e2`, `01`, `-0`, `1.0`, `null`, `{"a":1,"a":2}`, `{"2":1,"1":2}`,
+		`"\u003c"`, `"\/"`, `{"a":1,"1":2}`}
+	accepted := 0
+	for i := range 20000 {
+		input := ""
+		if i < len(seeded) {
+			input = seeded[i]
+		} else {
+			input = gen(0)
+		}
+		// Compare against the PARSER, not canonicalJavaScriptJSON: that entry
+		// trusts the filter, so an unsound filter makes it echo the input and the
+		// comparison can never fail. This is the check that can actually catch it.
+		out, err := canonicalParseWithoutFastPath([]byte(input))
+		if err != nil {
+			continue
+		}
+		if !canonicalJSONIsNormalized([]byte(input)) {
+			continue
+		}
+		accepted++
+		if string(out) != input {
+			t.Fatalf("the filter accepted %q but the canonical form is %q", input, out)
+		}
+	}
+	if accepted == 0 {
+		t.Fatal("generated no accepted input, so the property was never checked")
 	}
 }
 
@@ -387,4 +460,21 @@ func TestCanonicalizeKeepsIntegerTokensExactUnderD253(t *testing.T) {
 			t.Errorf("%s -> %s, want %s", c.in, got, c.want)
 		}
 	}
+}
+
+// canonicalParseWithoutFastPath runs the canonical scanner only, so a test can see
+// what the real encoder would produce for an input the fast filter accepted.
+func canonicalParseWithoutFastPath(encoded []byte) ([]byte, error) {
+	parser := canonicalParser{data: encoded}
+	parser.skipSpace()
+	out := make([]byte, 0, len(encoded))
+	out, err := parser.value(out)
+	if err != nil {
+		return nil, err
+	}
+	parser.skipSpace()
+	if parser.pos != len(encoded) {
+		return nil, fmt.Errorf("trailing content after the root value")
+	}
+	return out, nil
 }
