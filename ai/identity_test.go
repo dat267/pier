@@ -292,3 +292,29 @@ func TestIdentityNullVersionUsesTheDefault(t *testing.T) {
 		t.Fatalf("set version rendered %q", ua)
 	}
 }
+
+// identity.ts:82-88 matchesHost parses baseUrl with new URL and compares hostname, so
+// a lookalike that merely CONTAINS the expected host must not match: the attribution
+// headers would otherwise be attached to a third-party endpoint. Verified against the
+// reference's own matchesHost for all eight shapes.
+func TestMatchesBaseURLHostRejectsLookalikes(t *testing.T) {
+	for _, tc := range []struct {
+		baseURL string
+		want    bool
+	}{
+		{"https://integrate.api.nvidia.com/v1", true},
+		{"https://INTEGRATE.API.NVIDIA.COM/v1", true},
+		{"http://integrate.api.nvidia.com", true},
+		// No scheme: the reference's new URL() throws, so it is not a match even
+		// though the string is exactly the host.
+		{"integrate.api.nvidia.com", false},
+		{"https://x.com/integrate.api.nvidia.com", false},
+		{"https://integrate.api.nvidia.com.evil.com", false},
+		{"", false},
+		{"://bad", false},
+	} {
+		if got := matchesBaseURLHost(tc.baseURL, "integrate.api.nvidia.com"); got != tc.want {
+			t.Errorf("matchesBaseURLHost(%q) = %v, want %v", tc.baseURL, got, tc.want)
+		}
+	}
+}
