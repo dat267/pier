@@ -65,3 +65,38 @@ func TestProcessTerminalSizeFallsBackWhenQueryFails(t *testing.T) {
 		t.Fatalf("Rows() = %d, want 24", got)
 	}
 }
+
+// terminal.ts:562-568 is `process.stdout.columns || Number(process.env.COLUMNS) || 80`
+// and the same shape for LINES/24. Number() is wider than strconv.Atoi: it accepts a
+// fractional value ("80.7" is 80.7, and the terminal stores it as 80), exponent form
+// ("1e2" is 100) and trailing whitespace ("2 " is 2). Atoi rejected all three, so the
+// port fell back to the 80x24 default where the reference used the user's COLUMNS.
+func TestProcessTerminalSizeReadsColumnsLikeNumber(t *testing.T) {
+	for _, tc := range []struct {
+		columns string
+		lines   string
+		wantCol int
+		wantRow int
+	}{
+		{"80", "24", 80, 24},
+		{"1e2", "5e1", 100, 50},
+		{"80.7", "24.9", 80, 24},
+		{"2 ", "3 ", 2, 3},
+		{" 120 ", " 40 ", 120, 40},
+		{"0x50", "0x18", 80, 24},
+		{"", "", 80, 24},
+		{"abc", "abc", 80, 24},
+	} {
+		t.Setenv("COLUMNS", tc.columns)
+		t.Setenv("LINES", tc.lines)
+		terminal := NewProcessTerminal(nil, nil)
+		terminal.sizeFn = func() (int, int) { return 0, 0 }
+		terminal.refreshSize()
+		if got := terminal.Columns(); got != tc.wantCol {
+			t.Errorf("COLUMNS=%q: Columns() = %d, want %d", tc.columns, got, tc.wantCol)
+		}
+		if got := terminal.Rows(); got != tc.wantRow {
+			t.Errorf("LINES=%q: Rows() = %d, want %d", tc.lines, got, tc.wantRow)
+		}
+	}
+}

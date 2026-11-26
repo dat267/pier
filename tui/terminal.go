@@ -14,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/jsnum"
 	"golang.org/x/term"
 )
 
@@ -1177,13 +1178,18 @@ func (t *ProcessTerminal) querySize() (int, int) {
 	} else if w, h, err := term.GetSize(int(t.stdout.Fd())); err == nil {
 		width, height = w, h
 	}
+	// terminal.ts:562-568 is `process.stdout.columns || Number(process.env.COLUMNS)
+	// || 80` (and the same for LINES/24). Number() is wider than strconv.Atoi: it
+	// accepts exponent form ("1e2"), surrounding whitespace and a fractional value,
+	// whose truncation the int conversion then applies. Atoi rejected the first two
+	// and rejected "2 " as well, so a user setting COLUMNS=1e2 got the 80x24 default.
 	if width == 0 {
-		if columns, err := strconv.Atoi(os.Getenv("COLUMNS")); err == nil && columns != 0 {
+		if columns := jsnum.ToInt(jsNumberOrZero(os.Getenv("COLUMNS"))); columns != 0 {
 			width = columns
 		}
 	}
 	if height == 0 {
-		if lines, err := strconv.Atoi(os.Getenv("LINES")); err == nil && lines != 0 {
+		if lines := jsnum.ToInt(jsNumberOrZero(os.Getenv("LINES"))); lines != 0 {
 			height = lines
 		}
 	}
@@ -1384,4 +1390,15 @@ func matchRegexPrefix(s string, pattern string) (int, bool) {
 		return 0, false
 	}
 	return value, true
+}
+
+// jsNumberOrZero is `Number(value)` for an environment string, with NaN folded to 0
+// so the caller's `|| default` applies. jsnum.Number covers the accepted syntax: leading
+// and trailing whitespace, a sign, exponent form, and a hex prefix.
+func jsNumberOrZero(value string) float64 {
+	number, ok := jsnum.Number(value)
+	if !ok {
+		return 0
+	}
+	return number
 }
