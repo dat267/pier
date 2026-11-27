@@ -189,6 +189,23 @@ func TestModelArgumentCompletionReturnsOnlyMatchingModel(t *testing.T) {
 }
 
 func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T) {
+	// Isolate the process-wide TotalAlloc delta from other package test activity.
+	const childEnv = "PIER_TEST_MODEL_COMPLETION_REUSE_ALLOC_CHILD"
+	if os.Getenv(childEnv) != "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes$")
+		command.Env = append(os.Environ(), childEnv+"=1")
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("isolated allocation probe timed out: %s", output)
+		}
+		if err != nil {
+			t.Fatalf("isolated allocation probe failed: %v\n%s", err, output)
+		}
+		return
+	}
+
 	const modelCount = 4096
 	common := &ai.Model{Provider: "test", ID: "model"}
 	models := make([]coding.ScopedModel, modelCount)
@@ -219,10 +236,9 @@ func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T)
 	}
 	allocated := after.TotalAlloc - before.TotalAlloc
 	t.Logf("cached completion over %d models allocated %d bytes", modelCount, allocated)
-	// The window counts every goroutine's allocations, including background
-	// app-loop work under -race and -shuffle. A cache miss rebuilds all 4096
-	// items (~262 KiB), so 128 KiB still separates reuse from a rebuild while
-	// tolerating unrelated concurrent allocations.
+	// A cache miss rebuilds all 4096 items (~262 KiB), so 128 KiB still
+	// separates reuse from a rebuild. The child process keeps unrelated
+	// goroutines' allocations out of the TotalAlloc window.
 	if allocated > 128*1024 {
 		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, 128*1024)
 	}
