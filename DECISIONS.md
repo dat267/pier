@@ -9251,8 +9251,13 @@ elapsed label measures the frame's own clock and stops at the finish notice.
 A finish notice also states how long the call took ("… finished in 1m 24s", or
 "in 2.4s" under a minute), in the same format the tool frame's "Took" label uses,
 because a displaced call shows nothing about itself until it ends and its duration
-is part of what the model learns there. The handle carries its start time for
-this; a handle built without one omits the duration rather than inventing it.
+is part of what the model learns there. A start notice uses the same clock and
+says "… started after 1m 0s", so the model knows how long the call stayed in the
+foreground before the harness moved it rather than only that a move happened
+(`TestStartedNoticeNamesBackgroundDuration`). The transcript's header parser keeps
+that suffix in the title (`TestParseCompletionNoticeKeepsStartDuration`), so the
+notice stays recognizable. The handle carries its start time for both; a handle
+built without one omits the duration rather than inventing it.
 
 Both notices are stored as ordinary user messages, but the transcript
 recognizes their exact header (as it recognizes a skill block) and draws each as

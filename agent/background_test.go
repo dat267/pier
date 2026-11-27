@@ -692,6 +692,32 @@ func TestBackgroundNoticeCutKeepsUTF8(t *testing.T) {
 	}
 }
 
+// D538: the start notice must tell the model how long the call stayed in the
+// foreground before the harness displaced it, not merely that it was moved.
+func TestStartedNoticeNamesBackgroundDuration(t *testing.T) {
+	handle := ToolCallHandle{
+		ID: "bg-1", ToolName: "bash",
+		StartedAt: time.Now().Add(-90 * time.Second),
+	}
+	text := messageText(StartedNotice(handle))
+	if !strings.Contains(text, "started after 1m 30s") {
+		t.Fatalf("start notice does not name the background duration:\n%s", text)
+	}
+}
+
+// D538: the transcript's notice parser must keep the new duration suffix in
+// the title, so a timed start notice stays recognizable and readable.
+func TestParseCompletionNoticeKeepsStartDuration(t *testing.T) {
+	handle := ToolCallHandle{
+		ID: "bg-1a2b3c", ToolName: "bash",
+		StartedAt: time.Now().Add(-90 * time.Second),
+	}
+	title, _, ok := ParseCompletionNotice(messageText(StartedNotice(handle)))
+	if !ok || title != "bg-1a2b3c (bash) started after 1m 30s" {
+		t.Fatalf("title = %q, ok = %v", title, ok)
+	}
+}
+
 // D538: the notice is an ordinary user message, so the interactive transcript
 // recognizes it by its fixed shape, as upstream recognizes a skill block, and
 // draws it as a labeled block instead of a message the user typed.

@@ -236,22 +236,29 @@ func CompletionNotice(handle ToolCallHandle, result AgentToolResult) ai.Message 
 
 // StartedNotice is the message a displaced call wakes the model with the moment
 // the control returns to it, so the model reads "this is still running" as a
-// message of its own rather than only inside the tool result.
+// message of its own rather than only inside the tool result. When the handle
+// records its start, the notice also says how long the call spent in the
+// foreground before the harness moved it.
 func StartedNotice(handle ToolCallHandle) ai.Message {
 	where := ""
 	if handle.OutputPath != "" {
 		where = fmt.Sprintf(" The full output is in %s.", handle.OutputPath)
 	}
-	text := fmt.Sprintf("Background call %s (%s) started.%s\n\nContinue with other work; "+
-		"you will be told again when it finishes.", handle.ID, handle.ToolName, where)
+	took := ""
+	if !handle.StartedAt.IsZero() {
+		took = " after " + formatBackgroundDuration(time.Since(handle.StartedAt))
+	}
+	text := fmt.Sprintf("Background call %s (%s) started%s.%s\n\nContinue with other work; "+
+		"you will be told again when it finishes.", handle.ID, handle.ToolName, took, where)
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
 }
 
-// completionNoticePattern matches the header CompletionNotice writes: the
-// handle, the tool, the outcome and the optional output file, then a blank line.
+// completionNoticePattern matches the header CompletionNotice and StartedNotice
+// write: the handle, the tool, the outcome, an optional " in <duration>" or
+// " after <duration>", and the optional output file, then a blank line.
 var completionNoticePattern = regexp.MustCompile(
 	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (started|finished|failed)` +
-		`( in (?:\d+h \d+m \d+s|\d+m \d+s|\d+(?:\.\d+)?s))?\.` +
+		`((?: in| after) (?:\d+h \d+m \d+s|\d+m \d+s|\d+(?:\.\d+)?s))?\.` +
 		`((?: The full output is in [^\n]*\.)?)\n\n`)
 
 // ParseCompletionNotice splits a completion notice into its title ("bg-1
@@ -263,7 +270,8 @@ func ParseCompletionNotice(text string) (title string, body string, ok bool) {
 	if match == nil {
 		return "", "", false
 	}
-	// Groups: handle, tool, status, " in <duration>", the output-file sentence.
+	// Groups: handle, tool, status, the optional " in"/" after" duration, the
+	// output-file sentence.
 	title = text[match[2]:match[3]] + " (" + text[match[4]:match[5]] + ") " + text[match[6]:match[7]]
 	if match[8] >= 0 {
 		title += text[match[8]:match[9]]
