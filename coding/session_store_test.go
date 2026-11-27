@@ -1,10 +1,12 @@
 package coding
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -565,32 +567,53 @@ func TestDuplicateMemberNameEntrySurvivesLoad(t *testing.T) {
 // Invariant: the work of one append must not grow with the number of entries
 // already appended.
 func TestAppendCostDoesNotGrowBeforeFirstConversation(t *testing.T) {
+	// Isolate the process-wide TotalAlloc window from other tests. A wall-clock
+	// window failed under the isolated runner's parallel load: unrelated
+	// goroutines made the late 200 appends look four times slower.
+	const childEnv = "PIER_TEST_APPEND_COST_ALLOC_CHILD"
+	if os.Getenv(childEnv) != "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestAppendCostDoesNotGrowBeforeFirstConversation$")
+		command.Env = append(os.Environ(), childEnv+"=1")
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("isolated allocation probe timed out: %s", output)
+		}
+		if err != nil {
+			t.Fatalf("isolated allocation probe failed: %v\n%s", err, output)
+		}
+		return
+	}
+
 	manager, _ := newTestSession(t)
 	// A bash execution message is a "message" entry whose role is neither
 	// user nor assistant, so it never ends the scan.
 	msg := CreateBashExecutionMessage("echo", "x", nil, false, false, "", false, 0, nil)
 
-	timeAppends := func(count int) time.Duration {
-		start := time.Now()
+	allocAppends := func(count int) uint64 {
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
 		for range count {
 			manager.AppendMessage(msg)
 		}
-		return time.Since(start)
+		runtime.ReadMemStats(&after)
+		return after.TotalAlloc - before.TotalAlloc
 	}
-	// Warm: JITs, first allocation, and the initial file decision.
-	timeAppends(50)
-	early := timeAppends(200)
-	timeAppends(600)
-	late := timeAppends(200)
+	// Warm: first allocation, and the initial file decision.
+	allocAppends(50)
+	early := allocAppends(200)
+	allocAppends(600)
+	late := allocAppends(200)
 
-	// The same 200 appends must cost about the same early and late. A factor of
-	// four is far looser than the measured quadratic growth and far tighter
-	// than the noise on a warm filesystem.
-	if late > 4*early {
-		t.Fatalf("append cost grew with entry count: first 200 = %v, last 200 = %v (%.1fx)",
+	// A cache miss re-decodes all earlier entries on every append, pushing the
+	// late window near four times the early one. The memoized scan stays near
+	// 1.4x, so 2.5 separates the two without timing noise.
+	if float64(late) > 2.5*float64(early) {
+		t.Fatalf("append allocations grew with entry count: first 200 = %d bytes, last 200 = %d bytes (%.1fx)",
 			early, late, float64(late)/float64(early))
 	}
-	t.Logf("first 200 = %v, last 200 = %v", early, late)
+	t.Logf("first 200 = %d bytes, last 200 = %d bytes", early, late)
 }
 
 // TestLegacyFirstKeptIndexReportsTheSentinel pins the migration's v1 cut index.
